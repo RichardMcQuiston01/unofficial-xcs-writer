@@ -13,16 +13,16 @@ An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. 
 ## Installation
 
 ```bash
-npm install unofficial-xcs-writer
+npm install @richardmcquiston01/unofficial-xcs-writer
 # or
-pnpm add unofficial-xcs-writer
+pnpm add @richardmcquiston01/unofficial-xcs-writer
 ```
 
 ## Usage
 
 ```ts
-import { assertXcsFormat, extractXcsTokens, renderXcsFile } from 'unofficial-xcs-writer';
-import type { XcsVariable } from 'unofficial-xcs-writer';
+import { assertXcsFormat, extractXcsTokens, renderXcsFile } from '@richardmcquiston01/unofficial-xcs-writer';
+import type { XcsVariable } from '@richardmcquiston01/unofficial-xcs-writer';
 
 // Load an .xcs file as an ArrayBuffer (browser or Node.js)
 const buffer = await fetch('/templates/name-tag.xcs').then(r => r.arrayBuffer());
