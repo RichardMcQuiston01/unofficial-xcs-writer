@@ -99,3 +99,23 @@ manual testing. Each has a matching `.png` screenshot showing how it looks in xT
 - `TextElements.xcs` — three TEXT displays with literal text (no tokens), plus many PATH objects
 - `Shapes.xcs` — basic geometry only (RECT, CIRCLE, REGULAR_POLYGON), no text
 - `ImageAndCut.xcs` — BITMAP displays with large embedded base64 PNG data
+
+## Open Issues
+
+- If/when this library grows XCS *generation* (not just read/token-substitution) for text objects,
+  it needs real glyph outline extraction, not placeholder paths. Found while diagnosing the same gap
+  in `maker-toolkit`'s separate hand-rolled `XCSGenerator`
+  (`apps/desktop/src/shared/xcs/generator.ts`): a TEXT display object's `charJSONs` array is what
+  actually renders on canvas — `fontData.glyphData` is only supporting metadata. xTool Studio
+  regenerates `charJSONs` itself whenever it's empty, but does so using whatever `fontData.glyphData`
+  is supplied, so placeholder glyph paths produce visible placeholder shapes instead of real text
+  until the font is manually reselected inside xTool Studio (which forces it to discard the
+  placeholder data and re-shape with its own font resolution). A correct generator needs to:
+  (1) extract real glyph outlines from font files (e.g. via `opentype.js` or `fontkit`) and convert
+  each character's curves into the `dPath` string format xTool Studio uses (e.g.
+  `"M1.86 0L1.86 -18.18L4.27 -18.18L4.27 -2.15L13.22 -2.15L13.22 0Z"` for straight segments,
+  `"M10.27 -1.62Q9.03 -0.57 7.88 -0.14Q..."` for quadratic-curve glyphs); (2) compute real
+  `advanceWidth`/`advanceHeight`/bearings/`bbox` per glyph from the font, not hardcode them;
+  (3) populate `charJSONs` with one correctly-positioned `PATH` object per character along the text
+  baseline. Sample before/after `.xcs` files (broken export, xTool-resaved-unchanged,
+  xTool-resaved-with-real-font) are in `maker-toolkit`'s `xtool/` directory for reference.
