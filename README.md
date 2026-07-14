@@ -59,9 +59,22 @@ Decodes the buffer and returns the raw JSON string. Useful for inspection or pas
 
 Scans all `TEXT` display objects across all canvases and returns the unique token names found (without braces). For example, `{{LastName}}` in the file → `"LastName"` in the returned array.
 
-### `renderXcsFile(buffer, variables, values): Uint8Array`
+### `renderXcsFile(buffer, variables, values, fonts?): Uint8Array`
 
 Applies substitution to every `TEXT` display object and returns the modified file encoded as a UTF-8 `Uint8Array`. Tokens with no matching entry in `values` fall back to `variable.defaultValue`, or an empty string if no default is set.
+
+Whenever a display's text actually changes, its glyph outline data (`charJSONs` / `fontData.glyphData`) is regenerated from a real font so xTool Studio renders the new text correctly — xTool Studio only trusts a TEXT display's stored glyph shapes; it does not re-shape text on its own unless you manually reselect the font inside the app. Displays whose text doesn't change are left completely untouched.
+
+Pass `fonts` to supply real font file bytes (TTF/OTF/WOFF) keyed by a display's `style.fontFamily`:
+
+```ts
+const arialBuffer = await fetch('/fonts/arial.ttf').then(r => r.arrayBuffer());
+renderXcsFile(buffer, variables, values, { Arial: arialBuffer });
+```
+
+Any `fontFamily` not present in `fonts` falls back to a bundled default (Arimo, Apache-2.0, metric-compatible with Arial) — so the fix works out of the box with no font files required, just with shapes drawn from Arimo rather than the exact requested typeface.
+
+**Known limitation:** only straight horizontal-baseline layout is reproduced. xTool Studio's `style.curveX`/`curveY` curved-text layout formula is undocumented and isn't replicated — substituted text on a curved TEXT display gets correctly-shaped glyphs laid out on a straight line instead of the original curve.
 
 ### `XcsVariable`
 
@@ -71,6 +84,10 @@ interface XcsVariable {
   defaultValue?: string;
 }
 ```
+
+### `loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`
+
+Lower-level glyph-extraction primitives `renderXcsFile` is built on, exported for direct use (e.g. building a `TEXT` display from scratch). See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
 
 ## Development
 
@@ -92,6 +109,7 @@ Output files after `pnpm build`:
 
 ## Notes
 
-- All inputs and outputs use plain browser-compatible types (`ArrayBuffer`, `Uint8Array`, `string`) — no Node.js APIs, no DOM, no framework required.
+- All inputs and outputs use plain browser-compatible types (`ArrayBuffer`, `Uint8Array`, `string`) — no Node.js APIs, no DOM, no framework required. (`atob`/`crypto.randomUUID` are used for the bundled font and glyph IDs; both are available in browsers and Node ≥ 19.)
 - Only `TEXT` display objects are modified during substitution. Geometry, bitmaps, device configuration, and all other fields pass through unchanged.
 - This library targets the current xTool Creative Space JSON format. Older versions of the software may export a different structure.
+- Glyph outline extraction is powered by [opentype.js](https://github.com/opentypejs/opentype.js). The bundled fallback font is [Arimo](https://fonts.google.com/specimen/Arimo) v5.2.8 via [`@fontsource/arimo`](https://www.npmjs.com/package/@fontsource/arimo) (Apache License 2.0, see `third_party/arimo/LICENSE`).

@@ -56,14 +56,35 @@ All functions accept plain `ArrayBuffer` and return browser-compatible types. No
 | `assertXcsFormat` | `(buffer: ArrayBuffer): void` | Validates the buffer is parseable XCS JSON with a `canvas` array; throws a descriptive error otherwise |
 | `readXcsFile` | `(buffer: ArrayBuffer): string` | Decodes the buffer and returns the raw JSON string |
 | `extractXcsTokens` | `(buffer: ArrayBuffer): string[]` | Returns unique token names (without braces) from all TEXT displays across all canvases |
-| `renderXcsFile` | `(buffer: ArrayBuffer, variables: XcsVariable[], values: Record<string, string>): Uint8Array` | Substitutes tokens in TEXT displays and returns the modified file as a UTF-8 Uint8Array |
+| `renderXcsFile` | `(buffer: ArrayBuffer, variables: XcsVariable[], values: Record<string, string>, fonts?: Record<string, ArrayBuffer>): Uint8Array` | Substitutes tokens in TEXT displays and returns the modified file as a UTF-8 Uint8Array. Whenever a display's text changes, its `charJSONs`/`fontData.glyphData` are regenerated with real glyph outlines (see `src/glyphs.ts`) instead of xTool Studio silently reusing whatever stale glyph shapes were already on disk. `fonts` supplies real font bytes keyed by `style.fontFamily`; unsupplied families fall back to a bundled default (Arimo, Apache-2.0, metric-compatible with Arial). |
 
 `XcsVariable`: `{ token: string; defaultValue?: string }` — `token` is the name without braces.
 
+## Glyph Extraction (`src/glyphs.ts`)
+
+Real per-character glyph outline extraction, powered by `opentype.js`. Exported directly too
+(`loadFont`, `loadDefaultFont`, `layoutText`) for anyone building a TEXT display from scratch,
+e.g. a future XCS *generation* API. The exact xTool Studio JSON conventions (scale, Y-axis
+direction per field, how `charJSONs[i].x/y` relates to the display's own `x`/`y`) were reverse-
+engineered by diffing a generated file against xTool Studio re-saves — see the module's own
+doc comment for the full writeup, including the known curved-text (`style.curveX`/`curveY`)
+limitation: only straight horizontal-baseline layout is reproduced.
+
+The bundled fallback font is `@fontsource/arimo` v5.2.8, Apache License 2.0, embedded as a base64
+string in `src/assets/arimo-regular.ts`; the license text ships in `third_party/arimo/LICENSE`
+and is included in the published npm package via `package.json`'s `files` field.
+
 ## Build Tooling
 
-`tsup` — outputs ESM + CJS + `.d.ts`. No runtime dependencies; `tsup`, `typescript`, and `vitest`
-are the only devDependencies.
+`tsup` — outputs ESM + CJS + `.d.ts`. Runtime dependency: `opentype.js` (glyph outline parsing).
+`tsup`, `typescript`, `vitest`, and `@types/opentype.js` are the devDependencies.
+
+**Import gotcha:** `opentype.js` is a CJS-only UMD build with no `exports` map in its
+`package.json`. `import * as opentype from 'opentype.js'` leaves named properties like `.parse`
+undefined at runtime in built ESM output (Node's CJS/ESM interop can't reliably detect named
+exports from a dynamically-constructed `module.exports`). Use the default import instead:
+`import opentype from 'opentype.js'`, then `opentype.parse(...)`. Type-only imports
+(`import type * as opentype from 'opentype.js'`) are unaffected since they're fully erased.
 
 `package.json` exports map lists `types` before `import`/`require`:
 
@@ -102,20 +123,13 @@ manual testing. Each has a matching `.png` screenshot showing how it looks in xT
 
 ## Open Issues
 
-- If/when this library grows XCS *generation* (not just read/token-substitution) for text objects,
-  it needs real glyph outline extraction, not placeholder paths. Found while diagnosing the same gap
-  in `maker-toolkit`'s separate hand-rolled `XCSGenerator`
-  (`apps/desktop/src/shared/xcs/generator.ts`): a TEXT display object's `charJSONs` array is what
-  actually renders on canvas — `fontData.glyphData` is only supporting metadata. xTool Studio
-  regenerates `charJSONs` itself whenever it's empty, but does so using whatever `fontData.glyphData`
-  is supplied, so placeholder glyph paths produce visible placeholder shapes instead of real text
-  until the font is manually reselected inside xTool Studio (which forces it to discard the
-  placeholder data and re-shape with its own font resolution). A correct generator needs to:
-  (1) extract real glyph outlines from font files (e.g. via `opentype.js` or `fontkit`) and convert
-  each character's curves into the `dPath` string format xTool Studio uses (e.g.
-  `"M1.86 0L1.86 -18.18L4.27 -18.18L4.27 -2.15L13.22 -2.15L13.22 0Z"` for straight segments,
-  `"M10.27 -1.62Q9.03 -0.57 7.88 -0.14Q..."` for quadratic-curve glyphs); (2) compute real
-  `advanceWidth`/`advanceHeight`/bearings/`bbox` per glyph from the font, not hardcode them;
-  (3) populate `charJSONs` with one correctly-positioned `PATH` object per character along the text
-  baseline. Sample before/after `.xcs` files (broken export, xTool-resaved-unchanged,
-  xTool-resaved-with-real-font) are in `maker-toolkit`'s `xtool/` directory for reference.
+- No XCS *generation* API yet (building a project from scratch, canvas/displays/layers) — only
+  read + token-substitution. `maker-toolkit`'s `apps/desktop` has its own hand-rolled
+  `XCSGenerator` (`apps/desktop/src/shared/xcs/generator.ts`) for that use case, duplicating what
+  this library does for the substitution case. `src/glyphs.ts`'s `layoutText`/`loadFont` are
+  already reusable building blocks for a future generation API — consolidating
+  `apps/desktop`'s generator onto this package (removing the duplicate glyph-placeholder bug it
+  has) is a natural follow-up once that API exists.
+- Curved-text layout (`style.curveX`/`curveY`) is not reproduced by `renderXcsFile`'s glyph
+  regeneration — see `src/glyphs.ts`'s doc comment. Substituted text on a curved TEXT display
+  gets real, correctly-shaped glyphs, just laid out straight instead of on the original curve.
