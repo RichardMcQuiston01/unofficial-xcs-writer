@@ -2,6 +2,10 @@
 
 A framework-agnostic TypeScript library for reading, writing, and applying variable substitution to `.xcs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
 
+## Support
+
+If this library saved you some reverse-engineering, consider [buying me a coffee](https://www.paypal.com/ncp/payment/VDTESHTRR7684). ☕
+
 ## What is an XCS file?
 
 An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. It describes a laser project — canvas dimensions, design objects (shapes, text, images), layer assignments, and device parameters. This library lets you:
