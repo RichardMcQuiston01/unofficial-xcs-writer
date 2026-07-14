@@ -117,3 +117,7 @@ Output files after `pnpm build`:
 - Only `TEXT` display objects are modified during substitution. Geometry, bitmaps, device configuration, and all other fields pass through unchanged.
 - This library targets the current xTool Creative Space JSON format. Older versions of the software may export a different structure.
 - Glyph outline extraction is powered by [opentype.js](https://github.com/opentypejs/opentype.js). The bundled fallback font is [Arimo](https://fonts.google.com/specimen/Arimo) v5.2.8 via [`@fontsource/arimo`](https://www.npmjs.com/package/@fontsource/arimo) (Apache License 2.0, see `third_party/arimo/LICENSE`).
+
+## License
+
+[MIT](LICENSE). The bundled Arimo fallback font is separately licensed under Apache-2.0 (`third_party/arimo/LICENSE`).
