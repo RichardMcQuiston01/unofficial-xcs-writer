@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-08-17
+
+### Changed
+
+- Replaced the ad-hoc PayPal "Support" section in the README with the standard
+  "Buy Me a Coffee" donation block (Stripe link plus a scannable QR code at
+  `donate.svg`), now the last section of the README.
+- `donate.svg` is included in the published tarball so the README's QR image
+  resolves for consumers reading it from the package.
+
 ## [0.3.0] - 2026-07-14
 
 ### Added

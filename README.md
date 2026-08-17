@@ -2,10 +2,6 @@
 
 A framework-agnostic TypeScript library for reading, writing, and applying variable substitution to `.xcs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
 
-## Support
-
-If this library saved you some reverse-engineering, consider [buying me a coffee](https://www.paypal.com/ncp/payment/VDTESHTRR7684). ☕
-
 ## What is an XCS file?
 
 An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. It describes a laser project — canvas dimensions, design objects (shapes, text, images), layer assignments, and device parameters. This library lets you:
@@ -121,3 +117,11 @@ Output files after `pnpm build`:
 ## License
 
 [MIT](LICENSE). The bundled Arimo fallback font is separately licensed under Apache-2.0 (`third_party/arimo/LICENSE`).
+
+## Buy Me a Coffee
+
+If this app, code, or repository has helped you or someone you know, please consider donating. I appreciate any help to offset the costs of development and/or AI Credits.
+
+[**Donate via Stripe**](https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800), or scan:
+
+[![Donate via Stripe](./donate.svg)](https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800)
