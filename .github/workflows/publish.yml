@@ -1,0 +1,46 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # A release tagged v0.3.1 must ship package.json 0.3.1. Without this the
+      # publish still succeeds, it just puts a version on npm that no tag in
+      # this repo points at.
+      - name: Check release tag matches package.json version
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Release tag '${GITHUB_REF_NAME}' does not match package.json version '${pkg}'"
+            exit 1
+          fi
+
+      # prepublishOnly runs build + test, so a broken or stale dist/ fails the
+      # release instead of shipping (this is what went wrong with 0.2.0).
+      - run: pnpm publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

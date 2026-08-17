@@ -107,6 +107,14 @@ Output files after `pnpm build`:
 | `dist/index.cjs` | CommonJS |
 | `dist/index.d.ts` | TypeScript declarations |
 
+### Releasing
+
+Publishing to npm is automated. Bump the version in `package.json`, add a
+`CHANGELOG.md` entry, then create a GitHub release tagged `vX.Y.Z` — the
+[publish workflow](.github/workflows/publish.yml) checks the tag against
+`package.json`, rebuilds, runs the tests, and publishes with provenance.
+It needs an `NPM_TOKEN` repository secret with publish rights.
+
 ## Notes
 
 - All inputs and outputs use plain browser-compatible types (`ArrayBuffer`, `Uint8Array`, `string`) — no Node.js APIs, no DOM, no framework required. (`atob`/`crypto.randomUUID` are used for the bundled font and glyph IDs; both are available in browsers and Node ≥ 19.)
