@@ -1,6 +1,6 @@
 {
   "name": "@richardmcquiston01/unofficial-xcs-writer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Read, write, and apply variable substitution to xTool Creative Space .xcs files, with real glyph outline extraction for substituted text",
   "license": "MIT",
   "author": "Richard McQuiston <richard.mcquiston01@gmail.com>",
@@ -31,6 +31,7 @@
   "files": [
     "dist",
     "third_party",
+    "donate.svg",
     "CHANGELOG.md"
   ],
   "scripts": {
