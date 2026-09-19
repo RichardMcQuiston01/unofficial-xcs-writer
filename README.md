@@ -1,6 +1,6 @@
 # unofficial-xcs-writer
 
-A framework-agnostic TypeScript library for reading, writing, and applying variable substitution to `.xcs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
+A framework-agnostic TypeScript library for reading, writing, building, and applying variable substitution to `.xcs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
 
 ## What is an XCS file?
 
@@ -9,6 +9,7 @@ An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. 
 - **Read** an XCS file and inspect its contents
 - **Extract** `{{token}}` template placeholders from text objects
 - **Render** a filled-in copy by substituting values for those placeholders
+- **Build** a new `.xcs` project from scratch — text (straight, multi-line, or curved), paths, and embedded images
 
 ## Installation
 
@@ -45,6 +46,38 @@ const values = { FirstName: 'Jane', LastName: 'Smith' };
 const output: Uint8Array = renderXcsFile(buffer, variables, values);
 ```
 
+### Building a project from scratch
+
+```ts
+import {
+  createXCS,
+  loadDefaultFont,
+  layoutGlyphText,
+  layoutCurvedGlyphText,
+} from '@richardmcquiston01/unofficial-xcs-writer';
+
+const font = loadDefaultFont();
+
+const project = createXCS('P2S')
+  // Straight text needs a real glyph layout so xTool Studio renders
+  // actual outlines instead of placeholder blocks.
+  .addText('Hello', 10, 10, {
+    fontFamily: 'Arial',
+    fontSize: 24,
+    layout: layoutGlyphText(font, 'Hello', 8, 10, 10),
+  })
+  // Curved text: same idea, via layoutCurvedGlyphText -- the curve
+  // is baked into each character's own glyph shape and position, the
+  // way substituted text already bakes straight shapes.
+  .addText('Arch Text', 0, 40, {
+    fontFamily: 'Arial',
+    fontSize: 18,
+    layout: layoutCurvedGlyphText(font, 'Arch Text', 6, 90, 60, 20, 'center'),
+  })
+  .addPath('M0 0L10 0L10 10L0 10Z', 0, 60, 10, 10)
+  .toBytes(); // Uint8Array, ready to write to a .xcs file
+```
+
 ## API
 
 ### `assertXcsFormat(buffer: ArrayBuffer): void`
@@ -74,7 +107,7 @@ renderXcsFile(buffer, variables, values, { Arial: arialBuffer });
 
 Any `fontFamily` not present in `fonts` falls back to a bundled default (Arimo, Apache-2.0, metric-compatible with Arial) — so the fix works out of the box with no font files required, just with shapes drawn from Arimo rather than the exact requested typeface.
 
-**Known limitation:** only straight horizontal-baseline layout is reproduced. xTool Studio's `style.curveX`/`curveY` curved-text layout formula is undocumented and isn't replicated — substituted text on a curved TEXT display gets correctly-shaped glyphs laid out on a straight line instead of the original curve.
+**Known limitation:** `renderXcsFile` only reproduces straight horizontal-baseline layout when substituting into an *existing* TEXT display. xTool Studio's `style.curveX`/`curveY` curved-text formula is undocumented and can't be reverse-decoded from a file alone, so a curved display's substituted text gets correctly-shaped glyphs laid out straight instead of on the original curve. This doesn't apply to the *building* API below — there, you supply the curve angle yourself (see `layoutCurvedGlyphText`), so there's nothing to decode.
 
 ### `XcsVariable`
 
@@ -87,7 +120,30 @@ interface XcsVariable {
 
 ### `loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`
 
-Lower-level glyph-extraction primitives `renderXcsFile` is built on, exported for direct use (e.g. building a `TEXT` display from scratch). See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
+Lower-level glyph-extraction primitives everything else in this library is built on, exported for direct use. See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
+
+### Building (`src/builder.ts`, `src/layout.ts`)
+
+`createXCS(deviceId?)` / `new XCSGenerator(options?)` — starts a new project (one canvas, one default layer). Chainable methods:
+
+| Method | Adds |
+|--------|------|
+| `.addText(text, x, y, options?)` | A `TEXT` display. Pass `options.layout` (see below) for real glyph outlines — without it, text renders as placeholder blocks in xTool Studio. |
+| `.addPath(pathData, x, y, width, height, options?)` | A `PATH` display from SVG path data. |
+| `.addBitmap(pngBase64, x, y, widthMm, heightMm, originWidthPx, originHeightPx, options?)` | An embedded PNG, physically sized in mm. |
+| `.addLayer(color, name, order)` | A named, colored layer (one `#00befe` "Cyan" layer exists by default). |
+
+Then `.generate()` (the plain `XCSFile` object), `.toJSON()` (string), or `.toBytes()` (`Uint8Array`, matching `renderXcsFile`'s output type).
+
+Text layout — build the `layout` option for `.addText()` with one of:
+
+| Function | Layout |
+|----------|--------|
+| `layoutGlyphText(font, text, emSizeMm, xMm, yMm, letterSpacingMm?)` | Single-line, straight, anchored so the ink box's top-left lands at `(xMm, yMm)`. |
+| `layoutMultilineGlyphText(font, text, emSizeMm, letterSpacingMm, lineHeightMult, align)` | Multi-line (`\n`-separated), straight, each line aligned and vertically stacked. |
+| `layoutCurvedGlyphText(font, text, emSizeMm, curveDeg, boxWidthMm, boxHeightMm, align?, letterSpacingMm?)` | Single-line, curved along an arc spanning `curveDeg` degrees across a `boxWidthMm`-wide box (positive arches the apex upward, negative bows it downward — same convention as SVG `<textPath>`/canvas curved-text editors). Multi-line curved text isn't supported (matches typical curved-text editors, which also flatten multi-line curved text to one line). **Not yet visually verified against real xTool Studio rendering** (there's no way to check outside the application itself) — the geometry is self-consistent and unit-tested, but treat curved output as best-effort until you've spot-checked it. |
+
+All three return `GlyphTextLayout | null` (`null` for empty/whitespace-only text). `translateGlyphLayout(layout, dxMm, dyMm)` cheaply shifts an already-built layout without relaying out the font.
 
 ## Development
 

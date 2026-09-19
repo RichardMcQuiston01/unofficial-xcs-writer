@@ -121,15 +121,34 @@ manual testing. Each has a matching `.png` screenshot showing how it looks in xT
 - `Shapes.xcs` — basic geometry only (RECT, CIRCLE, REGULAR_POLYGON), no text
 - `ImageAndCut.xcs` — BITMAP displays with large embedded base64 PNG data
 
+## Generation API (`src/builder.ts`, `src/layout.ts`)
+
+`XCSGenerator`/`createXCS` build a project from scratch (canvas, layers, TEXT/PATH/BITMAP
+displays) — ported from `maker-toolkit`'s `apps/desktop/src/shared/xcs/generator.ts` (see that
+repo's `planning/ROADMAP.md` "XCS generator consolidation" note), which previously duplicated
+this. `apps/desktop`'s own copy has since been removed in favor of depending on this package.
+
+`src/layout.ts` builds on `glyphs.ts`'s straight, fixed-em `layoutText` to produce real-world,
+positioned `GlyphTextLayout`s for `.addText()`: `layoutGlyphText` (single line),
+`layoutMultilineGlyphText` (stacked lines), and `layoutCurvedGlyphText` (single line along a
+circular arc — new; see below).
+
 ## Open Issues
 
-- No XCS *generation* API yet (building a project from scratch, canvas/displays/layers) — only
-  read + token-substitution. `maker-toolkit`'s `apps/desktop` has its own hand-rolled
-  `XCSGenerator` (`apps/desktop/src/shared/xcs/generator.ts`) for that use case, duplicating what
-  this library does for the substitution case. `src/glyphs.ts`'s `layoutText`/`loadFont` are
-  already reusable building blocks for a future generation API — consolidating
-  `apps/desktop`'s generator onto this package (removing the duplicate glyph-placeholder bug it
-  has) is a natural follow-up once that API exists.
-- Curved-text layout (`style.curveX`/`curveY`) is not reproduced by `renderXcsFile`'s glyph
-  regeneration — see `src/glyphs.ts`'s doc comment. Substituted text on a curved TEXT display
-  gets real, correctly-shaped glyphs, just laid out straight instead of on the original curve.
+- **Curved-text substitution.** `renderXcsFile`'s glyph regeneration (existing-file
+  substitution) still can't reproduce `style.curveX`/`curveY` — see `src/glyphs.ts`'s doc
+  comment. The angle isn't recoverable from an existing file without decoding that undocumented
+  formula, so substituted text on an already-curved TEXT display still lays out straight. This
+  is different from the *building* API: there, the caller supplies the curve angle directly
+  (`layoutCurvedGlyphText`), so there's nothing to decode — building curved text from scratch
+  works today.
+- **Curved-text fidelity is unverified.** `layoutCurvedGlyphText` bakes each character's
+  rotated position/shape directly (mirroring how substitution already bakes real glyph shapes
+  rather than relying on xTool Studio to reshape anything), using the same arc-geometry
+  convention as SVG `<textPath>`/canvas curved-text editors. The math is internally
+  self-consistent and unit-tested (`src/layout.test.ts` checks every character lands on the
+  expected circle), but there's no way to verify visual fidelity against real xTool Studio
+  rendering outside the application itself — treat it as best-effort until spot-checked.
+- **Multi-line curved text** is not supported (single line only) — this matches typical
+  curved-text editors' own behavior (multi-line curved text is usually flattened to one line
+  too), not a gap specific to this library.
