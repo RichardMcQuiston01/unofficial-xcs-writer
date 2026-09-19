@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-19
+
+### Added
+
+- **Generation API** (`src/builder.ts`): `XCSGenerator`/`createXCS` build a `.xcs` project from
+  scratch — canvas, layers, and `TEXT`/`PATH`/`BITMAP` displays — ported from `maker-toolkit`'s
+  previously-duplicated hand-rolled generator. Chainable `.addText()`/`.addPath()`/
+  `.addBitmap()`/`.addLayer()`, then `.generate()`/`.toJSON()`/`.toBytes()`.
+- **Curved text layout** (`src/layout.ts`): `layoutCurvedGlyphText` lays a single line of text
+  out along a circular arc, baking each character's rotated position and glyph shape directly
+  (same approach `renderXcsFile` already uses for straight substituted text — xTool Studio only
+  trusts stored glyph shapes). Uses the same arc-geometry convention (chord width, sweep angle,
+  up/down sign, align-driven start offset) as SVG `<textPath>`/canvas curved-text editors, so a
+  document renders consistently across export formats. Not yet visually verified against real
+  xTool Studio output — see `CLAUDE.md`'s "Open Issues".
+- `layoutGlyphText`/`layoutMultilineGlyphText`/`translateGlyphLayout`/`fontSizePoints`
+  (`src/layout.ts`): the higher-level, real-world-scaled/positioned layout helpers built on
+  `glyphs.ts`'s `layoutText`, also ported from `maker-toolkit` (previously duplicated
+  consumer-side). `effectiveCurveDeg` clamps/normalizes a curve angle (±355°, treats <1° as
+  straight).
+
+### Changed
+
+- README's substitution "Known limitation" note narrowed to `renderXcsFile` specifically — it
+  still can't decode an existing curved display's `style.curveX`/`curveY`, but the new building
+  API doesn't have that problem (the caller supplies the angle directly).
+
 ## [0.3.1] - 2026-08-17
 
 ### Changed
