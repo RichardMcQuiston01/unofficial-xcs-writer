@@ -126,7 +126,8 @@ manual testing. Each has a matching `.png` screenshot showing how it looks in xT
 `XCSGenerator`/`createXCS` build a project from scratch (canvas, layers, TEXT/PATH/BITMAP
 displays) — ported from `maker-toolkit`'s `apps/desktop/src/shared/xcs/generator.ts` (see that
 repo's `planning/ROADMAP.md` "XCS generator consolidation" note), which previously duplicated
-this. `apps/desktop`'s own copy has since been removed in favor of depending on this package.
+this. `apps/desktop`'s own copy still exists unchanged as of this port; migrating it to depend
+on this package (once this package is merged and released) is a planned follow-up, not done yet.
 
 `src/layout.ts` builds on `glyphs.ts`'s straight, fixed-em `layoutText` to produce real-world,
 positioned `GlyphTextLayout`s for `.addText()`: `layoutGlyphText` (single line),
