@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-09-19
+
+### Changed
+
+- Version bump only — 0.4.0 itself was never published to npm (only consumed
+  ahead of release via a git dependency from `maker-toolkit`'s `apps/desktop`,
+  which pointed at this repo's `dist` branch as a workaround). No code changes
+  from 0.4.0; this is the first published release carrying the generation API
+  and curved-text layout described below.
+
 ## [0.4.0] - 2026-09-19
 
 ### Added
