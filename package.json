@@ -1,6 +1,6 @@
 {
   "name": "@richardmcquiston01/unofficial-xcs-writer",
-  "version": "0.4.1",
+  "version": "0.4.0",
   "description": "Read, write, build, and apply variable substitution to xTool Creative Space .xcs files, with real glyph outline extraction for text",
   "license": "MIT",
   "author": "Richard McQuiston <richard.mcquiston01@gmail.com>",
@@ -36,7 +36,6 @@
   ],
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup",
     "prepublishOnly": "pnpm build && pnpm test",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
