@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`.xs` (v2 workspace) format support** (`src/xs.ts`): `assertXsFormat`, `extractXsTokens`,
+  and `renderXsFile` read and apply `{{token}}` substitution to xTool Studio v1.7+'s new `.xs`
+  format — a ZIP archive of chunked per-canvas display files, unlike `.xcs`'s single plain-JSON
+  document. `.xcs` is now legacy as of xTool Studio v1.7 (still readable, no longer savable from
+  the app). The `TEXT` display schema itself (`text`/`style`/`fontData`/`charJSONs`) is
+  unchanged from `.xcs`, so token extraction and glyph regeneration share their implementation
+  with `renderXcsFile`/`extractXcsTokens` via a new `src/substitution.ts` module; only the
+  container format differs. Archives are read/written with [fflate](https://github.com/101arrowz/fflate)
+  (new runtime dependency); every entry other than the modified displays chunks round-trips
+  byte-for-byte unchanged, including large `PATH` displays' deduplicated `vectors/<bucketType>/`
+  vector store. `.xs` *generation* (building a new project from scratch) isn't implemented yet
+  — see `CLAUDE.md`'s "Open Issues".
+
 ## [0.4.1] - 2026-09-19
 
 ### Changed

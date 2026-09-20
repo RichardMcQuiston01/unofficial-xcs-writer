@@ -1,7 +1,7 @@
 {
   "name": "@richardmcquiston01/unofficial-xcs-writer",
   "version": "0.4.1",
-  "description": "Read, write, build, and apply variable substitution to xTool Creative Space .xcs files, with real glyph outline extraction for text",
+  "description": "Read, write, build, and apply variable substitution to xTool Creative Space .xcs and .xs files, with real glyph outline extraction for text",
   "license": "MIT",
   "author": "Richard McQuiston <richard.mcquiston01@gmail.com>",
   "repository": {
@@ -13,6 +13,7 @@
   "keywords": [
     "xtool",
     "xcs",
+    "xs",
     "laser",
     "template",
     "variable-substitution"
@@ -43,12 +44,14 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^26.6.2",
     "@types/opentype.js": "^1.3.10",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "opentype.js": "^2.0.0"
   }
 }

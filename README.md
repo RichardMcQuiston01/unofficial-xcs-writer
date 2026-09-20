@@ -1,15 +1,19 @@
 # unofficial-xcs-writer
 
-A framework-agnostic TypeScript library for reading, writing, building, and applying variable substitution to `.xcs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
+A framework-agnostic TypeScript library for reading, writing, building, and applying variable substitution to `.xcs` and `.xs` files produced by [xTool Creative Space](https://www.xtool.com/pages/software). Not affiliated with xTool.
 
-## What is an XCS file?
+## What is an XCS / XS file?
 
-An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. It describes a laser project — canvas dimensions, design objects (shapes, text, images), layer assignments, and device parameters. This library lets you:
+An `.xcs` file is a plain UTF-8 JSON document exported by xTool Creative Space. It describes a laser project — canvas dimensions, design objects (shapes, text, images), layer assignments, and device parameters.
 
-- **Read** an XCS file and inspect its contents
+Starting with xTool Studio v1.7, new projects are saved as `.xs` instead — a ZIP archive of several JSON files (project metadata, per-canvas display chunks, processing profiles, device bindings, and binary resources as real files rather than inline base64). `.xcs` is now legacy: v1.7+ can still open `.xcs` files but can no longer save back to that format. See `src/xs.ts` for the full format writeup.
+
+This library lets you, for both formats:
+
+- **Read** a file and inspect its contents
 - **Extract** `{{token}}` template placeholders from text objects
 - **Render** a filled-in copy by substituting values for those placeholders
-- **Build** a new `.xcs` project from scratch — text (straight, multi-line, or curved), paths, and embedded images
+- **Build** a new `.xcs` project from scratch — text (straight, multi-line, or curved), paths, and embedded images (`.xs` generation isn't supported yet — see `CLAUDE.md`'s "Open Issues")
 
 ## Installation
 
@@ -44,6 +48,21 @@ const values = { FirstName: 'Jane', LastName: 'Smith' };
 
 // Produce a filled-in .xcs file ready for download
 const output: Uint8Array = renderXcsFile(buffer, variables, values);
+```
+
+### Working with `.xs` files
+
+Same shape, different functions — `.xs` is a ZIP archive, so there's no `readXsFile` equivalent to `readXcsFile` (there's no single JSON string to return), but token extraction and substitution work the same way:
+
+```ts
+import { assertXsFormat, extractXsTokens, renderXsFile } from '@richardmcquiston01/unofficial-xcs-writer';
+
+const buffer = await fetch('/templates/name-tag.xs').then(r => r.arrayBuffer());
+
+assertXsFormat(buffer); // throws if invalid
+const tokens = extractXsTokens(buffer); // e.g. ['FirstName', 'LastName']
+
+const output: Uint8Array = renderXsFile(buffer, variables, values);
 ```
 
 ### Building a project from scratch
@@ -118,6 +137,20 @@ interface XcsVariable {
 }
 ```
 
+### `.xs` (v2 workspace) format
+
+### `assertXsFormat(buffer: ArrayBuffer): void`
+
+Validates that `buffer` is a ZIP archive with a `.format` entry equal to `"v2"` and a `project.json` entry. Throws a descriptive error otherwise.
+
+### `extractXsTokens(buffer: ArrayBuffer): string[]`
+
+Same as `extractXcsTokens`, but scans every `canvases/<canvasId>/displays-<chunkIndex>.json` chunk across the archive instead of a single `canvas` array.
+
+### `renderXsFile(buffer, variables, values, fonts?): Uint8Array`
+
+Same substitution and glyph-regeneration behavior as `renderXcsFile` (see above — including the same `fonts` parameter and curved-text limitation), applied to every displays chunk. Returns a re-zipped `.xs` archive; every entry other than the modified displays chunks is passed through byte-for-byte unchanged.
+
 ### `loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`
 
 Lower-level glyph-extraction primitives everything else in this library is built on, exported for direct use. See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
@@ -175,7 +208,8 @@ It needs an `NPM_TOKEN` repository secret with publish rights.
 
 - All inputs and outputs use plain browser-compatible types (`ArrayBuffer`, `Uint8Array`, `string`) — no Node.js APIs, no DOM, no framework required. (`atob`/`crypto.randomUUID` are used for the bundled font and glyph IDs; both are available in browsers and Node ≥ 19.)
 - Only `TEXT` display objects are modified during substitution. Geometry, bitmaps, device configuration, and all other fields pass through unchanged.
-- This library targets the current xTool Creative Space JSON format. Older versions of the software may export a different structure.
+- This library targets the current xTool Creative Space JSON/`.xs` formats. Older versions of the software may export a different structure.
+- `.xs` archives are read and re-written with [fflate](https://github.com/101arrowz/fflate); large `PATH` displays' vector data may be deduplicated into a separate `vectors/<bucketType>/` store rather than inlined — this library never touches `PATH` displays, so that structure round-trips untouched.
 - Glyph outline extraction is powered by [opentype.js](https://github.com/opentypejs/opentype.js). The bundled fallback font is [Arimo](https://fonts.google.com/specimen/Arimo) v5.2.8 via [`@fontsource/arimo`](https://www.npmjs.com/package/@fontsource/arimo) (Apache License 2.0, see `third_party/arimo/LICENSE`).
 
 ## License
