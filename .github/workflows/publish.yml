@@ -39,8 +39,24 @@ jobs:
             exit 1
           fi
 
+      # Lets a re-run (or a release whose version was already published some
+      # other way, e.g. a manual workflow_dispatch) succeed instead of
+      # failing on npm's "cannot publish over previously published version".
+      - name: Check if this version is already on npm
+        id: check
+        run: |
+          pkg="$(node -p "require('./package.json').name")"
+          ver="$(node -p "require('./package.json').version")"
+          if npm view "$pkg@$ver" version >/dev/null 2>&1; then
+            echo "::notice::$pkg@$ver is already on npm -- skipping publish."
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # prepublishOnly runs build + test, so a broken or stale dist/ fails the
       # release instead of shipping (this is what went wrong with 0.2.0).
       - run: pnpm publish --access public --no-git-checks --provenance
+        if: steps.check.outputs.already_published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
