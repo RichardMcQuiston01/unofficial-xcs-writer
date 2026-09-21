@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`.xs` processing-profile support**: `.addText()`/`.addPath()`/`.addBitmap()` accept a new
+  `processing: { processingType, values }` option (`src/builder.ts`), which `.toXsBytes()`
+  (`src/xs.ts`'s `buildXsArchive`, now taking an optional `XsProcessingBinding[]`) turns into a
+  real `profiles.json` entry plus a matching `LASER_PLANE`-mode binding in
+  `devices/device-<id>.json`. Displays given identical `processingType`+`values` are merged into
+  one shared profile/binding, matching how real xTool Studio exports dedupe identical settings.
+  `.toBytes()` (`.xcs` output) ignores this option -- `.xcs`'s own per-display processing format
+  is structurally different and much less understood, so it isn't implemented (see `CLAUDE.md`'s
+  Open Issues).
+
 ## [0.6.0] - 2026-09-21
 
 ### Added

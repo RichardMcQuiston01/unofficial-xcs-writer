@@ -103,6 +103,62 @@ function encodeJson(value: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(value));
 }
 
+/**
+ * A processing profile applied to one or more displays, destined for
+ * `profiles.json` + a `devices/device-<id>.json` binding -- see
+ * `buildXsArchive`'s doc comment. `processingType` (e.g.
+ * `"VECTOR_ENGRAVING"`, `"VECTOR_CUTTING"`, `"FILL_VECTOR_ENGRAVING"`)
+ * and the shape of `values` (power/speed/repeat/etc.) are xTool
+ * Studio's own, undocumented beyond what real exports show -- see
+ * `xs_samples/*.xs`'s `profiles.json` for verified examples.
+ */
+export interface XsProcessingBinding {
+  processingType: string;
+  values: Record<string, unknown>;
+  displayIds: string[];
+}
+
+function generateXsId(prefix: string): string {
+  const uuid =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+  return `${prefix}:${uuid}`;
+}
+
+/** Builds `profiles.json`'s contents and the `LASER_PLANE` mode's `profileRefs`/`bindings`. */
+function buildProcessing(
+  canvasId: string,
+  bindings: XsProcessingBinding[]
+): { profiles: Record<string, unknown>; profileRefs: string[]; deviceBindings: unknown[] } {
+  const profiles: Record<string, unknown> = {};
+  const profileRefs: string[] = [];
+  const deviceBindings: unknown[] = [];
+
+  for (const binding of bindings) {
+    const profileId = generateXsId('profile');
+    profiles[profileId] = {
+      id: profileId,
+      processingType: binding.processingType,
+      values: binding.values,
+    };
+    profileRefs.push(profileId);
+    deviceBindings.push({
+      bindingId: generateXsId('binding'),
+      canvasId,
+      mode: 'LASER_PLANE',
+      baseProfileId: profileId,
+      displayIds: binding.displayIds,
+    });
+  }
+
+  return { profiles, profileRefs, deviceBindings };
+}
+
 /** Decodes a `data:<mimeType>;base64,<data>` URL into its raw bytes and mime type. */
 function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mimeType: string } | null {
   const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
@@ -141,25 +197,35 @@ function coverResourceEntries(coverDataUrl: string): Record<string, Uint8Array> 
  * module's doc comment); only the container -- project/canvas/device
  * metadata -- is synthesized fresh.
  *
- * Processing profiles and device bindings are left empty: no
- * `addProfile`/processing API exists on `XCSGenerator` yet, matching
+ * `processingBindings` (see `XCSGenerator.addText`/`.addPath`/`.addBitmap`'s
+ * `processing` option, which populates this) becomes `profiles.json`
+ * plus matching `LASER_PLANE`-mode `profileRefs`/`bindings` in
+ * `devices/device-<id>.json`; when omitted, both stay empty, matching
  * how the `.xcs` generator's own `device` field is similarly minimal
- * (`data: { dataType: 'Map', value: [] }`). A generated `.xs` file may
- * need power/speed configured manually in xTool Studio before
- * cutting/engraving -- this is unverified against the real
- * application, like the curved-text caveats documented in
- * `src/glyphs.ts`.
+ * (`data: { dataType: 'Map', value: [] }`) -- a generated `.xs` file's
+ * displays may then need power/speed configured manually in xTool
+ * Studio before cutting/engraving. Either way this is unverified
+ * against the real application, like the curved-text caveats
+ * documented in `src/glyphs.ts`.
  *
  * Only single-canvas, single-chunk output is produced (`XCSGenerator`
  * itself only ever builds one canvas); real xTool Studio exports may
  * split a canvas's displays across multiple `displays-<n>.json` chunks,
  * but a single chunk is equally valid.
  */
-export function buildXsArchive(file: XCSFile): Uint8Array {
+export function buildXsArchive(
+  file: XCSFile,
+  processingBindings: XsProcessingBinding[] = []
+): Uint8Array {
   const canvas = file.canvas[0];
   if (!canvas) {
     throw new Error('Cannot build a .xs archive from a project with no canvas.');
   }
+
+  const { profiles, profileRefs, deviceBindings } = buildProcessing(
+    canvas.id,
+    processingBindings
+  );
 
   return zipSync({
     '.format': new TextEncoder().encode('v2'),
@@ -191,7 +257,7 @@ export function buildXsArchive(file: XCSFile): Uint8Array {
       cover: 'resources/project-cover.png',
       customProjectData: { projectTraceID: file.projectTraceID },
     }),
-    'profiles.json': encodeJson({ profiles: {} }),
+    'profiles.json': encodeJson({ profiles }),
     [`canvases/${canvas.id}.json`]: encodeJson({
       id: canvas.id,
       title: canvas.title,
@@ -238,9 +304,9 @@ export function buildXsArchive(file: XCSFile): Uint8Array {
                 focalLen: null,
                 focalLength: null,
               },
-              profileRefs: [],
+              profileRefs,
               patches: {},
-              bindings: [],
+              bindings: deviceBindings,
             },
           },
         },

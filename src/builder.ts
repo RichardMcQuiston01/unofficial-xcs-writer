@@ -1,6 +1,6 @@
 import type { CharJson, FontData, GlyphData } from './glyphs.js';
 import type { GlyphTextLayout } from './layout.js';
-import { buildXsArchive } from './xs.js';
+import { buildXsArchive, type XsProcessingBinding } from './xs.js';
 
 /**
  * Generates xTool Creative Space (.xcs) project files from scratch --
@@ -19,6 +19,18 @@ export interface XCSGeneratorOptions {
   devicePower?: number;
   canvasWidth?: number;
   canvasHeight?: number;
+}
+
+/**
+ * A display's laser processing settings (power/speed/etc.), applied
+ * via `.addText()`/`.addPath()`/`.addBitmap()`'s `processing` option.
+ * Only affects `.toXsBytes()` output -- see `XsProcessingBinding` in
+ * `src/xs.ts` for the format this becomes and its caveats. `.xcs`
+ * output (`.toBytes()`) has no equivalent yet and ignores it.
+ */
+export interface Processing {
+  processingType: string;
+  values: Record<string, unknown>;
 }
 
 export interface Layer {
@@ -199,6 +211,8 @@ export class XCSGenerator {
   private displays: DisplayObject[] = [];
   private layers: Map<string, Layer> = new Map();
   private options: Required<XCSGeneratorOptions>;
+  /** Keyed by `JSON.stringify([processingType, values])` to merge displays sharing identical settings into one profile. */
+  private processingBindings: Map<string, XsProcessingBinding> = new Map();
 
   constructor(options: XCSGeneratorOptions = {}) {
     this.options = {
@@ -237,10 +251,12 @@ export class XCSGenerator {
       lineColor: number;
       angle: number;
       layout: GlyphTextLayout;
+      processing: Processing;
     }> = {},
   ): this {
     const textObj = this.createTextObject(text, x, y, options);
     this.displays.push(textObj);
+    this.registerProcessing(textObj.id, options.processing);
     return this;
   }
 
@@ -259,10 +275,12 @@ export class XCSGenerator {
       lineColor: number;
       isFill: boolean;
       angle: number;
+      processing: Processing;
     }> = {},
   ): this {
     const pathObj = this.createPathObject(pathData, x, y, width, height, options);
     this.displays.push(pathObj);
+    this.registerProcessing(pathObj.id, options.processing);
     return this;
   }
 
@@ -279,7 +297,7 @@ export class XCSGenerator {
     heightMm: number,
     originWidthPx: number,
     originHeightPx: number,
-    options: Partial<{ layerColor: string; angle: number }> = {},
+    options: Partial<{ layerColor: string; angle: number; processing: Processing }> = {},
   ): this {
     const layerColor = options.layerColor || '#00befe';
     const dataUrl = `data:image/png;base64,${pngBase64}`;
@@ -356,6 +374,7 @@ export class XCSGenerator {
       opacity: 1,
     };
     this.displays.push(bitmap);
+    this.registerProcessing(bitmap.id, options.processing);
     return this;
   }
 
@@ -432,7 +451,25 @@ export class XCSGenerator {
    * container differs from `toBytes()`.
    */
   toXsBytes(): Uint8Array {
-    return buildXsArchive(this.generate());
+    return buildXsArchive(this.generate(), Array.from(this.processingBindings.values()));
+  }
+
+  /** Merges a display into an existing profile when another display already shares its exact `processing` settings, else starts a new one. */
+  private registerProcessing(displayId: string, processing: Processing | undefined): void {
+    if (!processing) return;
+
+    const key = JSON.stringify([processing.processingType, processing.values]);
+    const existing = this.processingBindings.get(key);
+    if (existing) {
+      existing.displayIds.push(displayId);
+      return;
+    }
+
+    this.processingBindings.set(key, {
+      processingType: processing.processingType,
+      values: processing.values,
+      displayIds: [displayId],
+    });
   }
 
   private createCanvas(): Canvas {

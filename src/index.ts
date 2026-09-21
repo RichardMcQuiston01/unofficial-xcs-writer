@@ -1,6 +1,7 @@
 export type { XcsVariable, XcsProject, XcsCanvas, XcsDisplay, XsDisplaysChunk } from './types.js';
 export { assertXcsFormat, readXcsFile, extractXcsTokens, renderXcsFile } from './xcs.js';
 export { assertXsFormat, extractXsTokens, renderXsFile, buildXsArchive } from './xs.js';
+export type { XsProcessingBinding } from './xs.js';
 export type {
   GlyphBBox,
   GlyphData,
@@ -21,6 +22,7 @@ export {
 } from './layout.js';
 export type {
   XCSGeneratorOptions,
+  Processing,
   Layer,
   FillStroke,
   TextStyle,
