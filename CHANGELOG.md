@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Machine catalog** (`src/machines.ts`): `XCSGeneratorOptions.deviceId`/`createXCS`'s argument
-  now accepts a `XTOOL_MACHINES` key (currently `"P2S"` and `"F2 Ultra UV"`, the two machines
-  verified from real exports in this repo) and resolves that machine's real `extId`/`extName`/
+  now accepts a `XTOOL_MACHINES` key -- currently 13 machines verified from real exports in this
+  repo (`P2S`, `F2 Ultra UV`, `S1`, `P3`, `M2`, `F2`, `F2 Ultra (Single)`, `F2 Ultra`, `M1 Ultra`,
+  `F1`, `F1 Lite`, `F1 Ultra`, `MetalFab`) -- and resolves that machine's real `extId`/`extName`/
   `deviceCode` (`.xs` only)/default power, instead of reusing whatever string you pass for all of
   them. A `MachineProfile` object can also be supplied directly for a machine not yet in the
   catalog. Existing raw device id strings still behave exactly as before (unaffected, since they

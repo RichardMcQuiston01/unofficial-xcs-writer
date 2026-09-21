@@ -179,13 +179,21 @@ manual testing. Each has a matching `.png` screenshot showing how it looks in xT
 - `Shapes.xcs` — basic geometry only (RECT, CIRCLE, REGULAR_POLYGON), no text
 - `ImageAndCut.xcs` — BITMAP displays with large embedded base64 PNG data
 
-`xs_samples/` contains four real xTool Studio v1.7.30 `.xs` exports, used by `src/xs.test.ts`:
+`xs_samples/` contains real xTool Studio v1.7.30 `.xs` exports, used by `src/xs.test.ts` and to
+verify `src/machines.ts`'s catalog:
 
 - `EditableText.xs` — one live TEXT display, `"Hello {{Name}}"`; the only sample with an
   unflattened TEXT display (needed to reverse-engineer the format — see "XS File Format" above)
 - `MadeWithLoveEngraveable.xs`, `MadeWithLoveScoreAndCut.xs`, `BirthdaySign.xs` — real
   marketplace/purchased designs with their text already flattened to PATH outlines (typical for
   distributed craft files); `BirthdaySign.xs` also exercises the `vectors/svg/` dedup bucket
+- `EditableText_S1.xs`, `EditableText_P3.xs`, `EditableText_M2.xs`, `EditableText_F2UltraUV.xs`,
+  `EditableText_F2.xs`, `EditableText_F2UltraSingle.xs`, `EditableText_F2Ultra.xs`,
+  `EditableText_M1Ultra.xs`, `EditableText_F1.xs`, `EditableText_F1Lite.xs`,
+  `EditableText_F1Ultra.xs`, `EditableText_MetalFab.xs` — same `"Hello {{Name}}"` project
+  re-exported once per machine via xTool Studio's device switcher, one per `src/machines.ts`
+  catalog entry; used only to verify each machine's `devices/device-<id>.json` fields, not
+  exercised by `src/xs.test.ts` directly
 
 ## Generation API (`src/builder.ts`, `src/layout.ts`)
 
@@ -231,17 +239,31 @@ pre-catalog behavior: `extId`/`extName`/`device.id` all equal that string, `devi
 to 55, and `.xs` output's `deviceCode` falls back to the device id itself (unchanged placeholder).
 
 **Catalog entries are reverse-engineered from real exports only, never guessed** — same rule as
-everything else in this repo. Currently exactly two, one per distinct machine identity seen
+everything else in this repo. Currently 13 entries, one per distinct machine identity seen
 across `xcs_samples/`/`xs_samples/`:
 
 | Key | extId | extName | deviceCode | defaultPower | Verified from |
 |-----|-------|---------|------------|--------------|----------------|
-| `P2S` | `P2S` | `P2S` | `ZY013` | `55` | `xs_samples/*.xs` (`devices/device-ZY013-1.json`) |
-| `F2 Ultra UV` | `GS009-CLASS-4` | `F2 Ultra UV` | *(unset)* | `5` | `xcs_samples/*.xcs` (root `extId`/`extName`) |
+| `P2S` | `P2S` | `P2S` | `ZY013` | `55` | `xs_samples/EditableText.xs` (`devices/device-ZY013-1.json`) |
+| `F2 Ultra UV` | `GS009-CLASS-4` | `F2 Ultra UV` | `GS009-CLASS-4` | `5` | `xcs_samples/*.xcs` (root `extId`/`extName`) and `xs_samples/EditableText_F2UltraUV.xs` (`deviceCode`) |
+| `S1` | `S1` | `S1` | `MD2` | `40` | `xs_samples/EditableText_S1.xs` |
+| `P3` | `P3` | `P3` | `ZY015` | `80` | `xs_samples/EditableText_P3.xs` |
+| `M2` | `JS002` | `M2` | `JS002` | `10` | `xs_samples/EditableText_M2.xs` |
+| `F2` | `GS006` | `F2` | `GS006` | `5` | `xs_samples/EditableText_F2.xs` |
+| `F2 Ultra (Single)` | `GS007-CLASS-4` | `F2 Ultra (Single)` | `GS007-CLASS-4` | `60` | `xs_samples/EditableText_F2UltraSingle.xs` |
+| `F2 Ultra` | `GS004-CLASS-4` | `F2 Ultra` | `GS004-CLASS-4` | `60` | `xs_samples/EditableText_F2Ultra.xs` |
+| `M1 Ultra` | `M1Ultra` | `M1 Ultra` | `ZH009` | `20` | `xs_samples/EditableText_M1Ultra.xs` |
+| `F1` | `F1` | `F1` | `MF1` | `10` | `xs_samples/EditableText_F1.xs` |
+| `F1 Lite` | `GS005` | `F1 Lite` | `GS005` | `10` | `xs_samples/EditableText_F1Lite.xs` |
+| `F1 Ultra` | `F1Ultra` | `F1 Ultra` | `GS002` | `20` | `xs_samples/EditableText_F1Ultra.xs` |
+| `MetalFab` | `HJ003` | `MetalFab CNC Cutter` | `HJ003` | `1200` | `xs_samples/EditableText_MetalFab.xs` (a laser welder/CNC cutter, not a laser engraver — hence the much higher power value) |
 
-`F2 Ultra UV`'s `deviceCode` is unset because no `.xs` export from that machine exists in this
-repo to verify it from — adding one (a real `.xs` file, or another machine model entirely) is
-how to extend this catalog; see `src/machines.ts`'s doc comment.
+`F1`, `F2`, and `F2 Ultra (Single)` report a `power` array with more than one value in their
+source sample (e.g. `F1`'s `[10, 2]`); `defaultPower` uses only the first, per this module's
+doc comment. Extending this catalog further means adding another real `.xs` export (or, for a
+`.xcs`-only field, another `.xcs` sample) to `xcs_samples/`/`xs_samples/` and reading its
+`devices/device-<id>.json` (or root `extId`/`extName` for `.xcs`) — see `src/machines.ts`'s doc
+comment.
 
 ## Open Issues
 

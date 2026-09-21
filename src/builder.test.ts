@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createXCS, XCSGenerator } from './builder.js';
 import { loadDefaultFont } from './glyphs.js';
 import { layoutGlyphText } from './layout.js';
-import type { MachineProfile } from './machines.js';
+import { XTOOL_MACHINES, type MachineProfile } from './machines.js';
 
 describe('XCSGenerator', () => {
   it('generates a project with the required top-level fields', () => {
@@ -135,11 +135,60 @@ describe('machine identity', () => {
     expect(device.deviceCode).toBe('ZY013');
   });
 
-  it('falls back to the device id as deviceCode for a machine with none verified', () => {
-    const entries = unzipSync(createXCS('F2 Ultra UV').toXsBytes());
+  it('falls back to the device id as deviceCode for an unknown device id', () => {
+    const entries = unzipSync(createXCS('SomeCustomDevice').toXsBytes());
     const device = JSON.parse(
-      new TextDecoder().decode(entries['devices/device-GS009-CLASS-4.json'])
+      new TextDecoder().decode(entries['devices/device-SomeCustomDevice.json'])
     );
-    expect(device.deviceCode).toBe('GS009-CLASS-4');
+    expect(device.deviceCode).toBe('SomeCustomDevice');
+  });
+
+  it('has exactly the 13 machines verified from real exports', () => {
+    expect(Object.keys(XTOOL_MACHINES).sort()).toEqual(
+      [
+        'P2S',
+        'F2 Ultra UV',
+        'S1',
+        'P3',
+        'M2',
+        'F2',
+        'F2 Ultra (Single)',
+        'F2 Ultra',
+        'M1 Ultra',
+        'F1',
+        'F1 Lite',
+        'F1 Ultra',
+        'MetalFab',
+      ].sort()
+    );
+  });
+
+  it.each([
+    ['S1', { extId: 'S1', extName: 'S1', deviceCode: 'MD2', defaultPower: 40 }],
+    ['P3', { extId: 'P3', extName: 'P3', deviceCode: 'ZY015', defaultPower: 80 }],
+    ['M2', { extId: 'JS002', extName: 'M2', deviceCode: 'JS002', defaultPower: 10 }],
+    ['F2', { extId: 'GS006', extName: 'F2', deviceCode: 'GS006', defaultPower: 5 }],
+    [
+      'F2 Ultra (Single)',
+      { extId: 'GS007-CLASS-4', extName: 'F2 Ultra (Single)', deviceCode: 'GS007-CLASS-4', defaultPower: 60 },
+    ],
+    [
+      'F2 Ultra',
+      { extId: 'GS004-CLASS-4', extName: 'F2 Ultra', deviceCode: 'GS004-CLASS-4', defaultPower: 60 },
+    ],
+    ['M1 Ultra', { extId: 'M1Ultra', extName: 'M1 Ultra', deviceCode: 'ZH009', defaultPower: 20 }],
+    ['F1', { extId: 'F1', extName: 'F1', deviceCode: 'MF1', defaultPower: 10 }],
+    ['F1 Lite', { extId: 'GS005', extName: 'F1 Lite', deviceCode: 'GS005', defaultPower: 10 }],
+    ['F1 Ultra', { extId: 'F1Ultra', extName: 'F1 Ultra', deviceCode: 'GS002', defaultPower: 20 }],
+    [
+      'MetalFab',
+      { extId: 'HJ003', extName: 'MetalFab CNC Cutter', deviceCode: 'HJ003', defaultPower: 1200 },
+    ],
+  ])('resolves %s to its real extId/extName/deviceCode/power', (name, expected) => {
+    const project = createXCS(name).generate();
+    expect(project.extId).toBe(expected.extId);
+    expect(project.extName).toBe(expected.extName);
+    expect(project.device.power).toBe(expected.defaultPower);
+    expect(XTOOL_MACHINES[name].deviceCode).toBe(expected.deviceCode);
   });
 });
