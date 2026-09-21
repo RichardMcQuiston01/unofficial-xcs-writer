@@ -177,3 +177,7 @@ Output files after `pnpm build`:
 ## License
 
 [MIT](LICENSE). The bundled Arimo fallback font is separately licensed under Apache-2.0 (`third_party/arimo/LICENSE`).
+
+## Copyright
+
+(c)2026 Richard McQuiston
