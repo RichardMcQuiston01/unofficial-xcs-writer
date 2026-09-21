@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-21
+
+### Changed
+
+- **README restructure**: removed the "Releasing" subsection (internal maintainer process,
+  not user-facing); moved the full "API" section into a new `API.md` (added to `package.json`'s
+  `files` so it ships with the npm package), with the README's "API" section now just a link to
+  it; added a disclaimer blockquote under the title stating this is an unofficial,
+  community-built library not affiliated with xTool; removed the hyperlink on "xTool Creative
+  Space" in the intro paragraph (kept as plain text); moved "Buy Me a Coffee" up to sit directly
+  above the API section instead of at the very end.
+- **Copyright section**: added a note that xTool, xTool Studio, and xTool Creative Space are
+  registered trademarks of Makeblock Co., Ltd., and that this project isn't affiliated with,
+  endorsed by, or sponsored by Makeblock or xTool.
+
 ## [0.8.0] - 2026-09-21
 
 ### Added
