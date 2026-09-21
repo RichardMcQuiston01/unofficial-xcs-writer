@@ -181,3 +181,5 @@ Output files after `pnpm build`:
 ## Copyright
 
 (c)2026 Richard McQuiston
+
+xTool, xTool Studio, and xTool Creative Space are registered trademarks of Makeblock Co., Ltd. This project is not affiliated with, endorsed by, or sponsored by Makeblock Co., Ltd. or xTool.
