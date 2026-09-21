@@ -33,7 +33,8 @@
     "dist",
     "third_party",
     "donate.svg",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "API.md"
   ],
   "scripts": {
     "build": "tsup",
