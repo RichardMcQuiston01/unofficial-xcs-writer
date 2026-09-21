@@ -1,6 +1,7 @@
 import type { CharJson, FontData, GlyphData } from './glyphs.js';
 import type { GlyphTextLayout } from './layout.js';
 import { buildXsArchive, type XsProcessingBinding } from './xs.js';
+import { XTOOL_MACHINES, type MachineProfile } from './machines.js';
 
 /**
  * Generates xTool Creative Space (.xcs) project files from scratch --
@@ -15,7 +16,16 @@ import { buildXsArchive, type XsProcessingBinding } from './xs.js';
  */
 
 export interface XCSGeneratorOptions {
-  deviceId?: string;
+  /**
+   * The target machine: a key into `XTOOL_MACHINES` (e.g. `"P2S"`,
+   * `"F2 Ultra UV"`) for accurate `extId`/`extName`/`deviceCode`/
+   * default power, a `MachineProfile` supplied directly (e.g. for a
+   * machine not yet in the catalog), or a raw device id string for
+   * anything else -- which sets `extId`/`extName`/`device.id` to that
+   * same string with no `deviceCode` (the previous, still-default
+   * behavior for unknown machines).
+   */
+  deviceId?: string | MachineProfile;
   devicePower?: number;
   canvasWidth?: number;
   canvasHeight?: number;
@@ -210,14 +220,25 @@ export class XCSGenerator {
   private canvas: Canvas;
   private displays: DisplayObject[] = [];
   private layers: Map<string, Layer> = new Map();
-  private options: Required<XCSGeneratorOptions>;
+  private options: Required<Omit<XCSGeneratorOptions, 'deviceId'>> & { deviceId: string };
+  /** From `XTOOL_MACHINES`/a supplied `MachineProfile`; `deviceId` itself when the machine isn't known. */
+  private extName: string;
+  /** `.xs`-only; unset when the machine's real `deviceCode` isn't verified (see `src/machines.ts`). */
+  private deviceCode: string | undefined;
   /** Keyed by `JSON.stringify([processingType, values])` to merge displays sharing identical settings into one profile. */
   private processingBindings: Map<string, XsProcessingBinding> = new Map();
 
   constructor(options: XCSGeneratorOptions = {}) {
+    const machine = this.resolveMachine(options.deviceId);
+    const deviceId =
+      machine?.extId ?? (typeof options.deviceId === 'string' ? options.deviceId : 'P2S');
+
+    this.extName = machine?.extName ?? deviceId;
+    this.deviceCode = machine?.deviceCode;
+
     this.options = {
-      deviceId: options.deviceId || 'P2S',
-      devicePower: options.devicePower || 55,
+      deviceId,
+      devicePower: options.devicePower || machine?.defaultPower || 55,
       canvasWidth: options.canvasWidth || 400,
       canvasHeight: options.canvasHeight || 400,
     };
@@ -227,6 +248,12 @@ export class XCSGenerator {
 
     // Add default cyan layer
     this.addLayer('#00befe', '{Cyan}', 1);
+  }
+
+  /** Looks `deviceId` up in `XTOOL_MACHINES` by name, passes a supplied `MachineProfile` through, or returns `undefined` for a raw/unknown device id (including the "no option given" default of `"P2S"`). */
+  private resolveMachine(deviceId: XCSGeneratorOptions['deviceId']): MachineProfile | undefined {
+    if (typeof deviceId === 'object') return deviceId;
+    return XTOOL_MACHINES[deviceId ?? 'P2S'];
   }
 
   /**
@@ -404,7 +431,7 @@ export class XCSGenerator {
       canvasId: this.canvasId,
       canvas: [this.canvas],
       extId: this.options.deviceId,
-      extName: this.options.deviceId,
+      extName: this.extName,
       device: {
         id: this.options.deviceId,
         power: this.options.devicePower,
@@ -445,13 +472,19 @@ export class XCSGenerator {
 
   /**
    * Export as a `.xs` (v2 workspace) ZIP archive instead of `.xcs` --
-   * see `buildXsArchive` in `src/xs.ts` for the container format and
-   * its limitations (no processing profiles/device bindings yet).
+   * see `buildXsArchive` in `src/xs.ts` for the container format.
    * Display objects themselves carry over unchanged; only the
-   * container differs from `toBytes()`.
+   * container differs from `toBytes()`. `deviceCode` comes from
+   * `XTOOL_MACHINES`/a supplied `MachineProfile` (see
+   * `XCSGeneratorOptions.deviceId`) when known, else `buildXsArchive`
+   * falls back to the device id itself, as before.
    */
   toXsBytes(): Uint8Array {
-    return buildXsArchive(this.generate(), Array.from(this.processingBindings.values()));
+    return buildXsArchive(
+      this.generate(),
+      Array.from(this.processingBindings.values()),
+      this.deviceCode
+    );
   }
 
   /** Merges a display into an existing profile when another display already shares its exact `processing` settings, else starts a new one. */
@@ -746,7 +779,12 @@ export class XCSGenerator {
   }
 }
 
-/** Convenience function to create a new, empty XCS project. */
-export function createXCS(deviceId = 'P2S'): XCSGenerator {
+/**
+ * Convenience function to create a new, empty XCS project. `deviceId`
+ * is a `XTOOL_MACHINES` key (e.g. `"P2S"`, `"F2 Ultra UV"`), a
+ * `MachineProfile` supplied directly, or a raw device id string --
+ * see `XCSGeneratorOptions.deviceId`.
+ */
+export function createXCS(deviceId: string | MachineProfile = 'P2S'): XCSGenerator {
   return new XCSGenerator({ deviceId });
 }

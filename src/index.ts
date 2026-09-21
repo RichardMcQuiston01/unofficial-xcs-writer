@@ -36,3 +36,5 @@ export type {
   XCSFile,
 } from './builder.js';
 export { XCSGenerator, createXCS } from './builder.js';
+export type { MachineProfile } from './machines.js';
+export { XTOOL_MACHINES } from './machines.js';

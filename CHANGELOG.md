@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Machine catalog** (`src/machines.ts`): `XCSGeneratorOptions.deviceId`/`createXCS`'s argument
+  now accepts a `XTOOL_MACHINES` key (currently `"P2S"` and `"F2 Ultra UV"`, the two machines
+  verified from real exports in this repo) and resolves that machine's real `extId`/`extName`/
+  `deviceCode` (`.xs` only)/default power, instead of reusing whatever string you pass for all of
+  them. A `MachineProfile` object can also be supplied directly for a machine not yet in the
+  catalog. Existing raw device id strings still behave exactly as before (unaffected, since they
+  simply don't match a catalog key).
+
+### Changed
+
+- `createXCS()`/`new XCSGenerator()` with no `deviceId` (defaulting to `"P2S"`) now embeds the
+  real `deviceCode: "ZY013"` in `.toXsBytes()` output, instead of the previous placeholder
+  (`file.device.id`, i.e. `"P2S"`). `.xcs` output (`.toBytes()`) is unaffected -- it has no
+  `deviceCode` field.
+
 ## [0.7.0] - 2026-09-21
 
 ### Added

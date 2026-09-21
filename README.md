@@ -113,6 +113,26 @@ and undocumented beyond real exports — see `xs_samples/*.xs`'s `profiles.json`
 option behave as before: a generated `.xs` file's power/speed may need to be set manually in
 xTool Studio before cutting/engraving.
 
+`createXCS('P2S')`'s argument (and `XCSGeneratorOptions.deviceId`) accepts a known machine name
+from `XTOOL_MACHINES` — currently `"P2S"` and `"F2 Ultra UV"`, the two machines verified from real
+exports in this repo — and resolves the real `extId`/`extName`/`deviceCode` (`.xs` only)/default
+power for that machine, instead of reusing whatever string you pass for all of them. Export the
+same design for multiple machines by building it once and calling `.toXsBytes()`/`.toBytes()`
+once per `createXCS(machineName)`:
+
+```ts
+import { createXCS, XTOOL_MACHINES } from '@richardmcquiston01/unofficial-xcs-writer';
+
+for (const machine of Object.keys(XTOOL_MACHINES)) {
+  const bytes = createXCS(machine).addPath('M0 0L10 0L10 10L0 10Z', 0, 0, 10, 10).toXsBytes();
+  // write `bytes` to e.g. `design-${machine}.xs`
+}
+```
+
+A device id not in the catalog still works exactly as before (no `.xs` `deviceCode`, `extId`/
+`extName`/`device.id` all set to that string, default power `55`); you can also pass a
+`MachineProfile` object directly for a machine not yet in the catalog.
+
 ## API
 
 ### `assertXcsFormat(buffer: ArrayBuffer): void`
@@ -175,9 +195,9 @@ Packages an already-`generate()`d project (see Building, below) into a `.xs` v2 
 
 Lower-level glyph-extraction primitives everything else in this library is built on, exported for direct use. See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
 
-### Building (`src/builder.ts`, `src/layout.ts`)
+### Building (`src/builder.ts`, `src/layout.ts`, `src/machines.ts`)
 
-`createXCS(deviceId?)` / `new XCSGenerator(options?)` — starts a new project (one canvas, one default layer). Chainable methods:
+`createXCS(deviceId?)` / `new XCSGenerator(options?)` — starts a new project (one canvas, one default layer). `deviceId` (and `options.deviceId`) accepts a `XTOOL_MACHINES` key, a `MachineProfile` object, or a raw device id string — see "Building a project from scratch" above. Chainable methods:
 
 | Method | Adds |
 |--------|------|
