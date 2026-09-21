@@ -212,10 +212,16 @@ function coverResourceEntries(coverDataUrl: string): Record<string, Uint8Array> 
  * itself only ever builds one canvas); real xTool Studio exports may
  * split a canvas's displays across multiple `displays-<n>.json` chunks,
  * but a single chunk is equally valid.
+ *
+ * `deviceCode` (`devices/device-<id>.json`'s own `deviceCode`, e.g.
+ * `"ZY013"` for a P2S -- see `src/machines.ts`) defaults to `file.device.id`
+ * when not given, matching the placeholder this function always used
+ * before `XCSGenerator` started resolving real machine identities.
  */
 export function buildXsArchive(
   file: XCSFile,
-  processingBindings: XsProcessingBinding[] = []
+  processingBindings: XsProcessingBinding[] = [],
+  deviceCode: string = file.device.id
 ): Uint8Array {
   const canvas = file.canvas[0];
   if (!canvas) {
@@ -280,7 +286,7 @@ export function buildXsArchive(
     }),
     [`devices/device-${file.device.id}.json`]: encodeJson({
       id: file.device.id,
-      deviceCode: file.device.id,
+      deviceCode,
       extId: file.extId,
       extName: file.extName,
       power: [file.device.power],

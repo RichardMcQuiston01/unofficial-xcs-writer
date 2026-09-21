@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createXCS, XCSGenerator } from './builder.js';
 import { loadDefaultFont } from './glyphs.js';
 import { layoutGlyphText } from './layout.js';
+import type { MachineProfile } from './machines.js';
 
 describe('XCSGenerator', () => {
   it('generates a project with the required top-level fields', () => {
@@ -90,5 +91,55 @@ describe('XCSGenerator', () => {
 
     expect(displaysChunk.displays[0].dPath).toBe('M0 0Z');
     expect(new TextDecoder().decode(entries['.format'])).toBe('v2');
+  });
+});
+
+describe('machine identity', () => {
+  it('resolves a known machine name to its real extId/extName/power', () => {
+    const project = createXCS('F2 Ultra UV').generate();
+    expect(project.extId).toBe('GS009-CLASS-4');
+    expect(project.extName).toBe('F2 Ultra UV');
+    expect(project.device.id).toBe('GS009-CLASS-4');
+    expect(project.device.power).toBe(5);
+  });
+
+  it('treats an unknown device id as a raw id, matching pre-catalog behavior', () => {
+    const project = createXCS('SomeCustomDevice').generate();
+    expect(project.extId).toBe('SomeCustomDevice');
+    expect(project.extName).toBe('SomeCustomDevice');
+    expect(project.device.power).toBe(55);
+  });
+
+  it('lets an explicit devicePower override the machine default', () => {
+    const project = new XCSGenerator({ deviceId: 'F2 Ultra UV', devicePower: 30 }).generate();
+    expect(project.device.power).toBe(30);
+  });
+
+  it('accepts a MachineProfile supplied directly', () => {
+    const machine: MachineProfile = {
+      name: 'Custom M1',
+      extId: 'CUSTOM-M1',
+      extName: 'Custom M1',
+      deviceCode: 'ABC123',
+      defaultPower: 40,
+    };
+    const project = new XCSGenerator({ deviceId: machine }).generate();
+    expect(project.extId).toBe('CUSTOM-M1');
+    expect(project.extName).toBe('Custom M1');
+    expect(project.device.power).toBe(40);
+  });
+
+  it("embeds the known machine's real deviceCode in .xs output", () => {
+    const entries = unzipSync(createXCS('P2S').toXsBytes());
+    const device = JSON.parse(new TextDecoder().decode(entries['devices/device-P2S.json']));
+    expect(device.deviceCode).toBe('ZY013');
+  });
+
+  it('falls back to the device id as deviceCode for a machine with none verified', () => {
+    const entries = unzipSync(createXCS('F2 Ultra UV').toXsBytes());
+    const device = JSON.parse(
+      new TextDecoder().decode(entries['devices/device-GS009-CLASS-4.json'])
+    );
+    expect(device.deviceCode).toBe('GS009-CLASS-4');
   });
 });

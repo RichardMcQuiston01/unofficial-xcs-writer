@@ -220,6 +220,29 @@ verified examples (`VECTOR_ENGRAVING`, `FILL_VECTOR_ENGRAVING`, `VECTOR_CUTTING`
 against the real application, like the curved-text caveats below. When no display has
 `processing` set, `profiles.json`/bindings stay empty exactly as before.
 
+### Machine catalog (`src/machines.ts`)
+
+`XCSGeneratorOptions.deviceId` (and `createXCS`'s single argument) accepts three things: a
+`XTOOL_MACHINES` key (e.g. `"P2S"`, `"F2 Ultra UV"`), a `MachineProfile` object supplied
+directly, or a raw device id string. A catalog hit resolves `extId`/`extName`/`device.id`/
+`devicePower` (overridable) to that machine's real values, and — `.xs`-only — its `deviceCode`
+(`devices/device-<id>.json`'s own field, no `.xcs` equivalent). A raw/unknown string keeps the
+pre-catalog behavior: `extId`/`extName`/`device.id` all equal that string, `devicePower` defaults
+to 55, and `.xs` output's `deviceCode` falls back to the device id itself (unchanged placeholder).
+
+**Catalog entries are reverse-engineered from real exports only, never guessed** — same rule as
+everything else in this repo. Currently exactly two, one per distinct machine identity seen
+across `xcs_samples/`/`xs_samples/`:
+
+| Key | extId | extName | deviceCode | defaultPower | Verified from |
+|-----|-------|---------|------------|--------------|----------------|
+| `P2S` | `P2S` | `P2S` | `ZY013` | `55` | `xs_samples/*.xs` (`devices/device-ZY013-1.json`) |
+| `F2 Ultra UV` | `GS009-CLASS-4` | `F2 Ultra UV` | *(unset)* | `5` | `xcs_samples/*.xcs` (root `extId`/`extName`) |
+
+`F2 Ultra UV`'s `deviceCode` is unset because no `.xs` export from that machine exists in this
+repo to verify it from — adding one (a real `.xs` file, or another machine model entirely) is
+how to extend this catalog; see `src/machines.ts`'s doc comment.
+
 ## Open Issues
 
 - **Curved-text substitution.** `renderXcsFile`'s glyph regeneration (existing-file
