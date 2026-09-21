@@ -132,3 +132,92 @@ describe('buildXsArchive (via XCSGenerator.toXsBytes)', () => {
     expect(() => buildXsArchive({ ...emptyProject, canvas: [] })).toThrow(/no canvas/);
   });
 });
+
+interface DeviceLaserPlaneMode {
+  profileRefs: string[];
+  bindings: { bindingId: string; baseProfileId: string; displayIds: string[] }[];
+}
+
+interface DeviceEntry {
+  processing: Record<string, { modes: { LASER_PLANE: DeviceLaserPlaneMode } }>;
+}
+
+describe('processing profiles', () => {
+  function deviceEntry(buffer: ArrayBuffer): DeviceEntry {
+    const entries = unzipSync(new Uint8Array(buffer));
+    const [, data] =
+      Object.entries(entries).find(([path]) => path.startsWith('devices/device-')) ?? [];
+    return JSON.parse(new TextDecoder().decode(data));
+  }
+
+  function laserPlaneMode(buffer: ArrayBuffer): DeviceLaserPlaneMode {
+    const { processing } = deviceEntry(buffer);
+    const [canvasId] = Object.keys(processing);
+    return processing[canvasId].modes.LASER_PLANE;
+  }
+
+  function profilesEntry(buffer: ArrayBuffer): Record<string, unknown> {
+    const entries = unzipSync(new Uint8Array(buffer));
+    return JSON.parse(new TextDecoder().decode(entries['profiles.json'])).profiles;
+  }
+
+  it('creates a profile and binding for a display with processing settings', () => {
+    const generator = createXCS().addPath('M0 0Z', 0, 0, 1, 1, {
+      processing: { processingType: 'VECTOR_CUTTING', values: { power: 80, speed: 10 } },
+    });
+    const buffer = generator.toXsBytes().slice().buffer;
+
+    const profiles = profilesEntry(buffer);
+    const profileIds = Object.keys(profiles);
+    expect(profileIds).toHaveLength(1);
+    expect(profiles[profileIds[0]]).toMatchObject({
+      processingType: 'VECTOR_CUTTING',
+      values: { power: 80, speed: 10 },
+    });
+
+    const mode = laserPlaneMode(buffer);
+    expect(mode.profileRefs).toEqual(profileIds);
+    expect(mode.bindings).toHaveLength(1);
+    expect(mode.bindings[0].baseProfileId).toBe(profileIds[0]);
+
+    const displaysChunk = displaysChunks(buffer)[0];
+    expect(mode.bindings[0].displayIds).toEqual([displaysChunk.displays[0].id]);
+  });
+
+  it('merges displays sharing identical processing settings into one profile', () => {
+    const settings = { processingType: 'VECTOR_ENGRAVING', values: { power: 50, speed: 20 } };
+    const generator = createXCS()
+      .addPath('M0 0Z', 0, 0, 1, 1, { processing: settings })
+      .addPath('M1 1Z', 0, 0, 1, 1, { processing: settings });
+    const buffer = generator.toXsBytes().slice().buffer;
+
+    const profiles = profilesEntry(buffer);
+    expect(Object.keys(profiles)).toHaveLength(1);
+
+    const { bindings } = laserPlaneMode(buffer);
+    expect(bindings).toHaveLength(1);
+    expect(bindings[0].displayIds).toHaveLength(2);
+  });
+
+  it('gives displays with different processing settings separate profiles', () => {
+    const generator = createXCS()
+      .addPath('M0 0Z', 0, 0, 1, 1, {
+        processing: { processingType: 'VECTOR_CUTTING', values: { power: 80 } },
+      })
+      .addPath('M1 1Z', 0, 0, 1, 1, {
+        processing: { processingType: 'VECTOR_CUTTING', values: { power: 40 } },
+      });
+    const buffer = generator.toXsBytes().slice().buffer;
+
+    expect(Object.keys(profilesEntry(buffer))).toHaveLength(2);
+  });
+
+  it('leaves profiles.json and bindings empty when no display has processing settings', () => {
+    const buffer = createXCS().addPath('M0 0Z', 0, 0, 1, 1).toXsBytes().slice().buffer;
+
+    expect(profilesEntry(buffer)).toEqual({});
+    const mode = laserPlaneMode(buffer);
+    expect(mode.profileRefs).toEqual([]);
+    expect(mode.bindings).toEqual([]);
+  });
+});

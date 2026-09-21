@@ -204,11 +204,21 @@ circular arc — new; see below).
 output as `toBytes()`) exports the built project as a `.xs` v2 archive instead of `.xcs`. Display
 objects carry over completely unchanged -- only the container (`project.json`/`profiles.json`/
 `devices/`/`canvases/`, see "XS File Format" above) is synthesized fresh, always as a single
-canvas in a single `displays-0.json` chunk. Processing profiles and device bindings are left
-empty (`profiles.json: { profiles: {} }`, `bindings: []`) since `XCSGenerator` has no
-processing-settings API yet -- like the curved-text caveats below, this is unverified against
-real xTool Studio: a generated `.xs` file may need power/speed configured manually before
-cutting/engraving.
+canvas in a single `displays-0.json` chunk.
+
+Pass `processing: { processingType, values }` to `.addText()`/`.addPath()`/`.addBitmap()`'s
+options to set that display's power/speed/etc. (only `.toXsBytes()` output -- `.xcs`'s per-display
+processing format is structurally different and much less documented; `.toBytes()` ignores this
+option entirely, see the Open Issue below). Displays that get given the *exact same*
+`processingType`+`values` share one `profiles.json` entry and one binding with multiple
+`displayIds` (matching how real xTool Studio exports dedupe identical settings -- see
+`xs_samples/MadeWithLoveEngraveable.xs`'s `devices/device-*.json`, where one binding covers 13
+displays); different settings
+each get their own profile+binding. `processingType`/`values`' shape is xTool Studio's own,
+undocumented beyond what real exports show -- see `xs_samples/*.xs`'s `profiles.json` for
+verified examples (`VECTOR_ENGRAVING`, `FILL_VECTOR_ENGRAVING`, `VECTOR_CUTTING`). Unverified
+against the real application, like the curved-text caveats below. When no display has
+`processing` set, `profiles.json`/bindings stay empty exactly as before.
 
 ## Open Issues
 
@@ -229,8 +239,16 @@ cutting/engraving.
 - **Multi-line curved text** is not supported (single line only) — this matches typical
   curved-text editors' own behavior (multi-line curved text is usually flattened to one line
   too), not a gap specific to this library.
-- **`.xs` generation has no processing-profile support.** `XCSGenerator.toXsBytes()` (see
-  "Generation API" above) always writes empty `profiles.json`/device bindings, since
-  `XCSGenerator` has no API for adding power/speed/processing settings to a display for either
-  format. A generated `.xs` file's displays may need those configured manually in xTool Studio
-  before cutting/engraving. Unverified against the real application.
+- **`.xcs` generation has no processing-profile support.** `.addText()`/`.addPath()`/
+  `.addBitmap()`'s `processing` option (see "Generation API" above) only affects `.toXsBytes()`
+  output. `.xcs` embeds per-display processing data in a much more complex, less-documented
+  shape (nested under `device.data.value[canvasId].displays.value[displayId]`, with
+  processing-type-specific `customize`/`official` parameter variants) -- only one real sample
+  covering two processing types has been examined so far, not enough to implement with
+  confidence given the real-world stakes of guessing laser power/speed settings wrong.
+  `.toBytes()`'s `device.data.value` stays empty as it always has.
+- **`.xs` processing-profile values are unvalidated.** `processing.values`' shape isn't checked
+  against `processingType` -- the caller is responsible for matching real xTool Studio field
+  names/shapes (see `xs_samples/*.xs`'s `profiles.json`). A generated `.xs` file's displays may
+  still need power/speed verified/adjusted in xTool Studio before cutting/engraving; this whole
+  feature is unverified against the real application.

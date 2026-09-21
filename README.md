@@ -93,15 +93,25 @@ const project = createXCS('P2S')
     fontSize: 18,
     layout: layoutCurvedGlyphText(font, 'Arch Text', 6, 90, 60, 20, 'center'),
   })
-  .addPath('M0 0L10 0L10 10L0 10Z', 0, 60, 10, 10)
+  .addPath('M0 0L10 0L10 10L0 10Z', 0, 60, 10, 10, {
+    // Only affects .toXsBytes() output -- see below.
+    processing: { processingType: 'VECTOR_CUTTING', values: { power: 80, speed: 10 } },
+  })
   .toBytes(); // Uint8Array, ready to write to a .xcs file
 ```
 
 Call `.toXsBytes()` instead of `.toBytes()` to export the same project as a `.xs` (v2 workspace)
-archive — same chainable builder, same display objects, different container. Processing
-profiles/device bindings aren't populated (there's no `addProfile`-style API yet), so a
-generated `.xs` file's power/speed may need to be set manually in xTool Studio before
-cutting/engraving.
+archive — same chainable builder, same display objects, different container.
+
+Pass `processing: { processingType, values }` to `.addText()`/`.addPath()`/`.addBitmap()`'s
+options to set that display's power/speed/etc. in the exported `.xs` file's `profiles.json` +
+device bindings — `.xcs` output (`.toBytes()`) ignores this option; its own per-display
+processing format is different and not supported yet. Displays given identical settings share
+one profile/binding automatically. `processingType`/`values`' exact shape is xTool Studio's own
+and undocumented beyond real exports — see `xs_samples/*.xs`'s `profiles.json` for examples
+(`VECTOR_ENGRAVING`, `VECTOR_CUTTING`, `FILL_VECTOR_ENGRAVING`). Displays with no `processing`
+option behave as before: a generated `.xs` file's power/speed may need to be set manually in
+xTool Studio before cutting/engraving.
 
 ## API
 
@@ -176,7 +186,9 @@ Lower-level glyph-extraction primitives everything else in this library is built
 | `.addBitmap(pngBase64, x, y, widthMm, heightMm, originWidthPx, originHeightPx, options?)` | An embedded PNG, physically sized in mm. |
 | `.addLayer(color, name, order)` | A named, colored layer (one `#00befe` "Cyan" layer exists by default). |
 
-Then `.generate()` (the plain `XCSFile` object), `.toJSON()` (string), `.toBytes()` (`Uint8Array`, matching `renderXcsFile`'s output type, as `.xcs`), or `.toXsBytes()` (`Uint8Array`, matching `renderXsFile`'s output type, as `.xs` — see the note in "Building a project from scratch" above about unset processing profiles).
+`.addText()`/`.addPath()`/`.addBitmap()` all also accept a `processing: { processingType, values }` option — see "Building a project from scratch" above; it only affects `.toXsBytes()` output.
+
+Then `.generate()` (the plain `XCSFile` object), `.toJSON()` (string), `.toBytes()` (`Uint8Array`, matching `renderXcsFile`'s output type, as `.xcs`), or `.toXsBytes()` (`Uint8Array`, matching `renderXsFile`'s output type, as `.xs`).
 
 Text layout — build the `layout` option for `.addText()` with one of:
 
