@@ -13,7 +13,7 @@ This library lets you, for both formats:
 - **Read** a file and inspect its contents
 - **Extract** `{{token}}` template placeholders from text objects
 - **Render** a filled-in copy by substituting values for those placeholders
-- **Build** a new `.xcs` project from scratch — text (straight, multi-line, or curved), paths, and embedded images (`.xs` generation isn't supported yet — see `CLAUDE.md`'s "Open Issues")
+- **Build** a new project from scratch — text (straight, multi-line, or curved), paths, and embedded images — and export it as either `.xcs` or `.xs`
 
 ## Installation
 
@@ -97,6 +97,12 @@ const project = createXCS('P2S')
   .toBytes(); // Uint8Array, ready to write to a .xcs file
 ```
 
+Call `.toXsBytes()` instead of `.toBytes()` to export the same project as a `.xs` (v2 workspace)
+archive — same chainable builder, same display objects, different container. Processing
+profiles/device bindings aren't populated (there's no `addProfile`-style API yet), so a
+generated `.xs` file's power/speed may need to be set manually in xTool Studio before
+cutting/engraving.
+
 ## API
 
 ### `assertXcsFormat(buffer: ArrayBuffer): void`
@@ -151,6 +157,10 @@ Same as `extractXcsTokens`, but scans every `canvases/<canvasId>/displays-<chunk
 
 Same substitution and glyph-regeneration behavior as `renderXcsFile` (see above — including the same `fonts` parameter and curved-text limitation), applied to every displays chunk. Returns a re-zipped `.xs` archive; every entry other than the modified displays chunks is passed through byte-for-byte unchanged.
 
+### `buildXsArchive(file: XCSFile): Uint8Array`
+
+Packages an already-`generate()`d project (see Building, below) into a `.xs` v2 ZIP archive. You won't normally call this directly — use `XCSGenerator.toXsBytes()` instead, which calls it for you.
+
 ### `loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`
 
 Lower-level glyph-extraction primitives everything else in this library is built on, exported for direct use. See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
@@ -166,7 +176,7 @@ Lower-level glyph-extraction primitives everything else in this library is built
 | `.addBitmap(pngBase64, x, y, widthMm, heightMm, originWidthPx, originHeightPx, options?)` | An embedded PNG, physically sized in mm. |
 | `.addLayer(color, name, order)` | A named, colored layer (one `#00befe` "Cyan" layer exists by default). |
 
-Then `.generate()` (the plain `XCSFile` object), `.toJSON()` (string), or `.toBytes()` (`Uint8Array`, matching `renderXcsFile`'s output type).
+Then `.generate()` (the plain `XCSFile` object), `.toJSON()` (string), `.toBytes()` (`Uint8Array`, matching `renderXcsFile`'s output type, as `.xcs`), or `.toXsBytes()` (`Uint8Array`, matching `renderXsFile`'s output type, as `.xs` — see the note in "Building a project from scratch" above about unset processing profiles).
 
 Text layout — build the `layout` option for `.addText()` with one of:
 

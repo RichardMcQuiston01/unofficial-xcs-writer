@@ -1,6 +1,7 @@
 import { unzipSync, zipSync } from 'fflate';
 import type { XcsVariable, XsDisplaysChunk } from './types.js';
 import { collectTextTokens, substituteTextDisplays } from './substitution.js';
+import type { XCSFile } from './builder.js';
 import type * as opentype from 'opentype.js';
 
 /**
@@ -96,4 +97,155 @@ export function renderXsFile(
   }
 
   return zipSync(entries);
+}
+
+function encodeJson(value: unknown): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(value));
+}
+
+/** Decodes a `data:<mimeType>;base64,<data>` URL into its raw bytes and mime type. */
+function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mimeType: string } | null {
+  const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+  if (!match) return null;
+
+  const [, mimeType, base64] = match;
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, mimeType };
+}
+
+function coverResourceEntries(coverDataUrl: string): Record<string, Uint8Array> {
+  const cover = decodeDataUrl(coverDataUrl);
+  if (!cover) return {};
+
+  return {
+    'resources/project-cover.png': cover.bytes,
+    'resources/project-cover.png.meta.json': encodeJson({
+      ref: 'resources/project-cover.png',
+      metadata: {
+        kind: 'image',
+        source: { type: 'workspace', value: 'project-cover.png' },
+        mimeType: cover.mimeType,
+      },
+    }),
+  };
+}
+
+/**
+ * Packages a freshly generated `.xcs`-shaped project (from
+ * `XCSGenerator.generate()`) into a `.xs` (v2 workspace) ZIP archive --
+ * the "build" counterpart to this module's read/substitute functions
+ * above. Display objects (TEXT/PATH/BITMAP) carry over completely
+ * unchanged, since that schema is identical between formats (see this
+ * module's doc comment); only the container -- project/canvas/device
+ * metadata -- is synthesized fresh.
+ *
+ * Processing profiles and device bindings are left empty: no
+ * `addProfile`/processing API exists on `XCSGenerator` yet, matching
+ * how the `.xcs` generator's own `device` field is similarly minimal
+ * (`data: { dataType: 'Map', value: [] }`). A generated `.xs` file may
+ * need power/speed configured manually in xTool Studio before
+ * cutting/engraving -- this is unverified against the real
+ * application, like the curved-text caveats documented in
+ * `src/glyphs.ts`.
+ *
+ * Only single-canvas, single-chunk output is produced (`XCSGenerator`
+ * itself only ever builds one canvas); real xTool Studio exports may
+ * split a canvas's displays across multiple `displays-<n>.json` chunks,
+ * but a single chunk is equally valid.
+ */
+export function buildXsArchive(file: XCSFile): Uint8Array {
+  const canvas = file.canvas[0];
+  if (!canvas) {
+    throw new Error('Cannot build a .xs archive from a project with no canvas.');
+  }
+
+  return zipSync({
+    '.format': new TextEncoder().encode('v2'),
+    'meta/persistence-meta.json': encodeJson({
+      schemaVersion: '2.0.0',
+      protocol: 'xcs-workspace-v2',
+    }),
+    'project.json': encodeJson({
+      __v2__: true,
+      version: '2.0.0',
+      schemaMeta: { schemaVersion: '2.1.0', format: 'directory' },
+      projectId: file.projectTraceID,
+      projectTraceID: file.projectTraceID,
+      projectName: 'Untitled',
+      activeCanvasId: canvas.id,
+      activeDeviceId: file.device.id,
+      versionInfo: {
+        source: 'web',
+        appVersion: '',
+        savedAt: file.modify,
+        ua: file.ua,
+        minRequiredVersion: file.minRequiredVersion,
+        appMinRequiredVersion: file.appMinRequiredVersion,
+        webMinRequiredVersion: file.webMinRequiredVersion,
+      },
+      created: file.created,
+      modify: file.modify,
+      modules: { canvases: [canvas.id], devices: [file.device.id] },
+      cover: 'resources/project-cover.png',
+      customProjectData: { projectTraceID: file.projectTraceID },
+    }),
+    'profiles.json': encodeJson({ profiles: {} }),
+    [`canvases/${canvas.id}.json`]: encodeJson({
+      id: canvas.id,
+      title: canvas.title,
+      hidden: false,
+      layerData: canvas.layerData,
+      groupData: canvas.groupData,
+      extendInfo: {
+        version: canvas.extendInfo.version,
+        minCanvasVersion: canvas.extendInfo.minCanvasVersion,
+        displayProcessConfigMap: {},
+        rulerPluginData: { rulerGuide: [] },
+        type: '2d',
+      },
+      chunkLayout: { displayCount: canvas.displays.length, chunkCount: 1, chunkIndexes: [0] },
+    }),
+    [`canvases/${canvas.id}/displays-0.json`]: encodeJson({
+      canvasId: canvas.id,
+      chunkIndex: 0,
+      displays: canvas.displays,
+    }),
+    [`devices/device-${file.device.id}.json`]: encodeJson({
+      id: file.device.id,
+      deviceCode: file.device.id,
+      extId: file.extId,
+      extName: file.extName,
+      power: [file.device.power],
+      processing: {
+        [canvas.id]: {
+          id: canvas.id,
+          activeMode: 'LASER_PLANE',
+          modes: {
+            LASER_PLANE: {
+              ignoredDisplayIds: [],
+              data: {
+                material: 0,
+                thickness: null,
+                perimeter: null,
+                diameter: null,
+                isProcessByLayer: false,
+                pathPlanning: 'auto',
+                fillPlanning: 'separate',
+                scanDirection: 'topToBottom',
+                enableOddEvenKerf: true,
+                focalLen: null,
+                focalLength: null,
+              },
+              profileRefs: [],
+              patches: {},
+              bindings: [],
+            },
+          },
+        },
+      },
+    }),
+    ...coverResourceEntries(file.cover),
+  });
 }
