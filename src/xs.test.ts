@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { assertXsFormat, extractXsTokens, renderXsFile } from './xs.js';
+import { assertXsFormat, extractXsTokens, renderXsFile, buildXsArchive } from './xs.js';
+import { createXCS } from './builder.js';
+import { loadDefaultFont } from './glyphs.js';
+import { layoutGlyphText } from './layout.js';
 import type { XsDisplaysChunk } from './types.js';
 
 const SAMPLES_DIR = fileURLToPath(new URL('../xs_samples/', import.meta.url));
@@ -71,5 +74,61 @@ describe('renderXsFile', () => {
     const buffer = loadSample('MadeWithLoveEngraveable.xs');
     const rendered = renderXsFile(buffer, [{ token: 'Unused' }], { Unused: 'x' });
     expect(() => unzipSync(rendered)).not.toThrow();
+  });
+});
+
+describe('buildXsArchive (via XCSGenerator.toXsBytes)', () => {
+  it('produces a valid .xs archive with the built displays', () => {
+    const font = loadDefaultFont();
+    const layout = layoutGlyphText(font, 'Hello {{Name}}', 6, 3, 4)!;
+    const generator = createXCS('P2S').addText('Hello {{Name}}', 3, 4, {
+      fontFamily: 'Arial',
+      layout,
+    });
+
+    const bytes = generator.toXsBytes();
+    const buffer = bytes.slice().buffer;
+
+    expect(() => assertXsFormat(buffer)).not.toThrow();
+    expect(extractXsTokens(buffer)).toEqual(['Name']);
+
+    const chunks = displaysChunks(buffer);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].displays[0].text).toBe('Hello {{Name}}');
+    expect(chunks[0].displays[0].type).toBe('TEXT');
+  });
+
+  it('substitutes tokens through renderXsFile the same as a real .xs file', () => {
+    const font = loadDefaultFont();
+    const layout = layoutGlyphText(font, 'Hello {{Name}}', 6, 3, 4)!;
+    const buffer = createXCS()
+      .addText('Hello {{Name}}', 3, 4, { fontFamily: 'Arial', layout })
+      .toXsBytes().slice().buffer;
+
+    const rendered = renderXsFile(buffer, [{ token: 'Name' }], { Name: 'World' });
+    const after = displaysChunks(rendered.slice().buffer)[0].displays[0];
+    expect(after.text).toBe('Hello World');
+  });
+
+  it('includes the cover image as a real PNG resource, not inline base64', () => {
+    const buffer = createXCS().addPath('M0 0Z', 0, 0, 1, 1).toXsBytes().slice().buffer;
+    const entries = unzipSync(new Uint8Array(buffer));
+
+    const cover = entries['resources/project-cover.png'];
+    expect(cover).toBeDefined();
+    // PNG magic bytes.
+    expect(Array.from(cover.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+    const meta = JSON.parse(new TextDecoder().decode(entries['resources/project-cover.png.meta.json']));
+    expect(meta.ref).toBe('resources/project-cover.png');
+    expect(meta.metadata.mimeType).toBe('image/png');
+
+    const project = JSON.parse(new TextDecoder().decode(entries['project.json']));
+    expect(project.cover).toBe('resources/project-cover.png');
+  });
+
+  it('throws when building from a project with no canvas', () => {
+    const emptyProject = createXCS().generate();
+    expect(() => buildXsArchive({ ...emptyProject, canvas: [] })).toThrow(/no canvas/);
   });
 });

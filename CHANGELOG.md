@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`.xs` generation**: `XCSGenerator.toXsBytes()` (`src/xs.ts`'s new `buildXsArchive`) exports a
+  built project as a `.xs` v2 archive instead of `.xcs` -- the same chainable builder
+  (`.addText()`/`.addPath()`/`.addBitmap()`/`.addLayer()`), same display objects, different
+  container. `project.json`/`profiles.json`/`devices/`/`canvases/` metadata is synthesized
+  fresh, always as a single canvas in a single `displays-0.json` chunk, with the cover image
+  written as a real `resources/project-cover.png` file instead of inline base64. Processing
+  profiles and device bindings are left empty (no `addProfile`-style API exists yet) -- a
+  generated `.xs` file's power/speed settings may need to be configured manually in xTool
+  Studio before cutting/engraving.
+
 ## [0.5.0] - 2026-09-20
 
 ### Added

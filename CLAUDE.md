@@ -200,6 +200,16 @@ positioned `GlyphTextLayout`s for `.addText()`: `layoutGlyphText` (single line),
 `layoutMultilineGlyphText` (stacked lines), and `layoutCurvedGlyphText` (single line along a
 circular arc — new; see below).
 
+`XCSGenerator.toXsBytes()` (`src/xs.ts`'s `buildXsArchive`, called on the same `generate()`
+output as `toBytes()`) exports the built project as a `.xs` v2 archive instead of `.xcs`. Display
+objects carry over completely unchanged -- only the container (`project.json`/`profiles.json`/
+`devices/`/`canvases/`, see "XS File Format" above) is synthesized fresh, always as a single
+canvas in a single `displays-0.json` chunk. Processing profiles and device bindings are left
+empty (`profiles.json: { profiles: {} }`, `bindings: []`) since `XCSGenerator` has no
+processing-settings API yet -- like the curved-text caveats below, this is unverified against
+real xTool Studio: a generated `.xs` file may need power/speed configured manually before
+cutting/engraving.
+
 ## Open Issues
 
 - **Curved-text substitution.** `renderXcsFile`'s glyph regeneration (existing-file
@@ -219,7 +229,8 @@ circular arc — new; see below).
 - **Multi-line curved text** is not supported (single line only) — this matches typical
   curved-text editors' own behavior (multi-line curved text is usually flattened to one line
   too), not a gap specific to this library.
-- **No `.xs` generation API.** `src/builder.ts`'s `XCSGenerator`/`createXCS` only produce `.xcs`
-  files. Building a new project directly as a `.xs` v2 archive (ZIP container, chunked
-  displays, `profiles.json`/`devices/` scaffolding) isn't implemented yet — only reading and
-  substituting into an *existing* `.xs` file (`src/xs.ts`) is supported so far.
+- **`.xs` generation has no processing-profile support.** `XCSGenerator.toXsBytes()` (see
+  "Generation API" above) always writes empty `profiles.json`/device bindings, since
+  `XCSGenerator` has no API for adding power/speed/processing settings to a display for either
+  format. A generated `.xs` file's displays may need those configured manually in xTool Studio
+  before cutting/engraving. Unverified against the real application.

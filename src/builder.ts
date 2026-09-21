@@ -1,5 +1,6 @@
 import type { CharJson, FontData, GlyphData } from './glyphs.js';
 import type { GlyphTextLayout } from './layout.js';
+import { buildXsArchive } from './xs.js';
 
 /**
  * Generates xTool Creative Space (.xcs) project files from scratch --
@@ -421,6 +422,17 @@ export class XCSGenerator {
    */
   toBytes(): Uint8Array {
     return new TextEncoder().encode(this.toJSON());
+  }
+
+  /**
+   * Export as a `.xs` (v2 workspace) ZIP archive instead of `.xcs` --
+   * see `buildXsArchive` in `src/xs.ts` for the container format and
+   * its limitations (no processing profiles/device bindings yet).
+   * Display objects themselves carry over unchanged; only the
+   * container differs from `toBytes()`.
+   */
+  toXsBytes(): Uint8Array {
+    return buildXsArchive(this.generate());
   }
 
   private createCanvas(): Canvas {

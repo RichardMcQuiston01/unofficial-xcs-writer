@@ -1,3 +1,4 @@
+import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { createXCS, XCSGenerator } from './builder.js';
 import { loadDefaultFont } from './glyphs.js';
@@ -75,5 +76,19 @@ describe('XCSGenerator', () => {
     const parsedFromBytes = JSON.parse(new TextDecoder().decode(bytes));
     expect(parsedFromBytes.canvas[0].displays[0].dPath).toBe('M0 0Z');
     expect(parsedFromBytes.extId).toBe(parsedFromJson.extId);
+  });
+
+  it('exports a valid .xs archive via toXsBytes with the same displays as toBytes', () => {
+    const generator = createXCS().addPath('M0 0Z', 0, 0, 1, 1);
+
+    const xcs = JSON.parse(new TextDecoder().decode(generator.toBytes()));
+    const entries = unzipSync(generator.toXsBytes());
+    const canvasId = xcs.canvasId as string;
+    const displaysChunk = JSON.parse(
+      new TextDecoder().decode(entries[`canvases/${canvasId}/displays-0.json`])
+    );
+
+    expect(displaysChunk.displays[0].dPath).toBe('M0 0Z');
+    expect(new TextDecoder().decode(entries['.format'])).toBe('v2');
   });
 });
