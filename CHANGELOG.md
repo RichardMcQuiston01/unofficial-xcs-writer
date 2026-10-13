@@ -2,7 +2,7 @@
 
 [Back to README](./README.md)
 
-| [Unreleased](#unreleased) | [0.8.1 - 2026-09-21](#081---2026-09-21) | [0.8.0 - 2026-09-21](#080---2026-09-21) | [0.7.0 - 2026-09-21](#070---2026-09-21) | [0.6.0 - 2026-09-21](#060---2026-09-21) | [0.5.0 - 2026-09-20](#050---2026-09-20) | [0.4.1 - 2026-09-19](#041---2026-09-19) | [0.4.0 - 2026-09-19](#040---2026-09-19) | [0.3.1 - 2026-08-17](#031---2026-08-17) | [0.3.0 - 2026-07-14](#030---2026-07-14) | [0.2.0 - 2026-07-14](#020---2026-07-14) | [0.1.0 - 2026-05-19](#010---2026-05-19) |
+| [Unreleased](#unreleased) | [0.8.2 - 2026-10-13](#082---2026-10-13) | [0.8.1 - 2026-09-21](#081---2026-09-21) | [0.8.0 - 2026-09-21](#080---2026-09-21) | [0.7.0 - 2026-09-21](#070---2026-09-21) | [0.6.0 - 2026-09-21](#060---2026-09-21) | [0.5.0 - 2026-09-20](#050---2026-09-20) | [0.4.1 - 2026-09-19](#041---2026-09-19) | [0.4.0 - 2026-09-19](#040---2026-09-19) | [0.3.1 - 2026-08-17](#031---2026-08-17) | [0.3.0 - 2026-07-14](#030---2026-07-14) | [0.2.0 - 2026-07-14](#020---2026-07-14) | [0.1.0 - 2026-05-19](#010---2026-05-19) |
 
 All notable changes to this project will be documented in this file.
 
@@ -10,6 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+[Back to Top](#changelog)
+
+## [0.8.2] - 2026-10-13
+
+### Changed
+
+- **Documentation only**: no library code changed. Rewrote `README.md` to be shorter, with an
+  author block, a Table of Contents, Back to Top links, a Supported Machines table, and the
+  License section corrected to MIT. Added a Back to README link, a menu row, and Back to Top
+  links to `API.md` and `CHANGELOG.md`.
 
 [Back to Top](#changelog)
 
