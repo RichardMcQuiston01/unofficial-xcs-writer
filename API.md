@@ -1,16 +1,26 @@
 # API Reference
 
+[Back to README](./README.md)
+
+| [`assertXcsFormat(buffer: ArrayBuffer): void`](#assertxcsformatbuffer-arraybuffer-void) | [`readXcsFile(buffer: ArrayBuffer): string`](#readxcsfilebuffer-arraybuffer-string) | [`extractXcsTokens(buffer: ArrayBuffer): string[]`](#extractxcstokensbuffer-arraybuffer-string) | [`renderXcsFile(buffer, variables, values, fonts?): Uint8Array`](#renderxcsfilebuffer-variables-values-fonts-uint8array) | [`XcsVariable`](#xcsvariable) | [`.xs` (v2 workspace) format](#xs-v2-workspace-format) | [`assertXsFormat(buffer: ArrayBuffer): void`](#assertxsformatbuffer-arraybuffer-void) | [`extractXsTokens(buffer: ArrayBuffer): string[]`](#extractxstokensbuffer-arraybuffer-string) | [`renderXsFile(buffer, variables, values, fonts?): Uint8Array`](#renderxsfilebuffer-variables-values-fonts-uint8array) | [`buildXsArchive(file: XCSFile): Uint8Array`](#buildxsarchivefile-xcsfile-uint8array) | [`loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`](#loadfontbuffer-arraybuffer--loaddefaultfont--layouttextfont-text-originx-originy) | [Building (`src/builder.ts`, `src/layout.ts`, `src/machines.ts`)](#building-srcbuilderts-srclayoutts-srcmachinests) |
+
 ## `assertXcsFormat(buffer: ArrayBuffer): void`
 
 Validates that `buffer` is a parseable XCS JSON file containing a `canvas` array. Throws a descriptive error if the file is invalid or unrecognized.
+
+[Back to Top](#api-reference)
 
 ## `readXcsFile(buffer: ArrayBuffer): string`
 
 Decodes the buffer and returns the raw JSON string. Useful for inspection or pass-through scenarios.
 
+[Back to Top](#api-reference)
+
 ## `extractXcsTokens(buffer: ArrayBuffer): string[]`
 
 Scans all `TEXT` display objects across all canvases and returns the unique token names found (without braces). For example, `{{LastName}}` in the file → `"LastName"` in the returned array.
+
+[Back to Top](#api-reference)
 
 ## `renderXcsFile(buffer, variables, values, fonts?): Uint8Array`
 
@@ -29,6 +39,8 @@ Any `fontFamily` not present in `fonts` falls back to a bundled default (Arimo, 
 
 **Known limitation:** `renderXcsFile` only reproduces straight horizontal-baseline layout when substituting into an *existing* TEXT display. xTool Studio's `style.curveX`/`curveY` curved-text formula is undocumented and can't be reverse-decoded from a file alone, so a curved display's substituted text gets correctly-shaped glyphs laid out straight instead of on the original curve. This doesn't apply to the *building* API below — there, you supply the curve angle yourself (see `layoutCurvedGlyphText`), so there's nothing to decode.
 
+[Back to Top](#api-reference)
+
 ## `XcsVariable`
 
 ```ts
@@ -38,27 +50,41 @@ interface XcsVariable {
 }
 ```
 
+[Back to Top](#api-reference)
+
 ## `.xs` (v2 workspace) format
+
+[Back to Top](#api-reference)
 
 ## `assertXsFormat(buffer: ArrayBuffer): void`
 
 Validates that `buffer` is a ZIP archive with a `.format` entry equal to `"v2"` and a `project.json` entry. Throws a descriptive error otherwise.
 
+[Back to Top](#api-reference)
+
 ## `extractXsTokens(buffer: ArrayBuffer): string[]`
 
 Same as `extractXcsTokens`, but scans every `canvases/<canvasId>/displays-<chunkIndex>.json` chunk across the archive instead of a single `canvas` array.
+
+[Back to Top](#api-reference)
 
 ## `renderXsFile(buffer, variables, values, fonts?): Uint8Array`
 
 Same substitution and glyph-regeneration behavior as `renderXcsFile` (see above — including the same `fonts` parameter and curved-text limitation), applied to every displays chunk. Returns a re-zipped `.xs` archive; every entry other than the modified displays chunks is passed through byte-for-byte unchanged.
 
+[Back to Top](#api-reference)
+
 ## `buildXsArchive(file: XCSFile): Uint8Array`
 
 Packages an already-`generate()`d project (see Building, below) into a `.xs` v2 ZIP archive. You won't normally call this directly — use `XCSGenerator.toXsBytes()` instead, which calls it for you.
 
+[Back to Top](#api-reference)
+
 ## `loadFont(buffer: ArrayBuffer)` / `loadDefaultFont()` / `layoutText(font, text, originX, originY)`
 
 Lower-level glyph-extraction primitives everything else in this library is built on, exported for direct use. See `src/glyphs.ts` for the exact xTool JSON conventions these were reverse-engineered against.
+
+[Back to Top](#api-reference)
 
 ## Building (`src/builder.ts`, `src/layout.ts`, `src/machines.ts`)
 
@@ -84,3 +110,9 @@ Text layout — build the `layout` option for `.addText()` with one of:
 | `layoutCurvedGlyphText(font, text, emSizeMm, curveDeg, boxWidthMm, boxHeightMm, align?, letterSpacingMm?)` | Single-line, curved along an arc spanning `curveDeg` degrees across a `boxWidthMm`-wide box (positive arches the apex upward, negative bows it downward — same convention as SVG `<textPath>`/canvas curved-text editors). Multi-line curved text isn't supported (matches typical curved-text editors, which also flatten multi-line curved text to one line). **Not yet visually verified against real xTool Studio rendering** (there's no way to check outside the application itself) — the geometry is self-consistent and unit-tested, but treat curved output as best-effort until you've spot-checked it. |
 
 All three return `GlyphTextLayout | null` (`null` for empty/whitespace-only text). `translateGlyphLayout(layout, dxMm, dyMm)` cheaply shifts an already-built layout without relaying out the font.
+
+[Back to Top](#api-reference)
+
+---
+
+[Back to README](./README.md)
