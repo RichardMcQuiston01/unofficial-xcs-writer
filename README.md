@@ -1,27 +1,43 @@
 # unofficial-xcs-writer
 
-> **Disclaimer:** Unofficial, community-built library. Not affiliated with, endorsed by, or sponsored by xTool or Makeblock.
+- Author: [Richard McQuiston](mailto:richard.mcquiston@gmail.com)
+- Website: https://richardmcquiston.com/
 
-A framework-agnostic TypeScript library for reading, building, and templating xTool project files (`.xcs` and `.xs`). It has no DOM or Node.js dependencies, so it runs in browsers and Node.js alike.
+> **Disclaimer:** This is an unofficial, community-built library. It is not affiliated with, endorsed by, or sponsored by xTool or Makeblock.
+
+## Table of Contents
+
+| [Overview](#overview) | [Features](#features) | [Getting Started](#getting-started) | [Supported Machines](#supported-machines) | [Known Limitations](#known-limitations) | [More Information](#more-information) | [Development](#development) | [Buy Me a Coffee](#buy-me-a-coffee) | [License](#license) | [Copyright](#copyright) |
+
+## Overview
+
+This is a TypeScript library for xTool project files. It reads, builds, and fills in templates for `.xcs` and `.xs` files.
+
+An `.xcs` file is plain JSON. An `.xs` file is a ZIP archive of JSON files. xTool Studio 1.7 and newer saves `.xs` by default. It can still open `.xcs` files but can no longer save them.
+
+The library uses no framework, no DOM, and no Node.js-only features. It works in browsers and in Node.js.
+
+[Back to Top](#table-of-contents)
 
 ## Features
 
-- **Extract** `{{token}}` placeholders from text objects.
-- **Render** filled-in copies by substituting values for those tokens. Substituted text gets freshly generated glyph outlines instead of stale ones.
-- **Build** projects from scratch with straight, multi-line, or curved text, paths, and bitmaps. Export as `.xcs` or `.xs`.
-- **Target machines** from a catalog of 13 xTool devices, verified from real exports.
-- **Set processing profiles** (power, speed, etc.) per display in `.xs` output.
+- Find `{{token}}` placeholders in text objects.
+- Fill in the placeholders with your own values. The library draws new glyph outlines for the changed text.
+- Build a project from scratch. You can add straight, multi-line, or curved text, paths, and images.
+- Save the project as `.xcs` or `.xs`.
+- Pick a target machine from a list of 13 xTool devices.
+- Set power and speed for each object in `.xs` output.
 
-## File formats
+[Back to Top](#table-of-contents)
 
-| Format | Container | Notes |
-|--------|-----------|-------|
-| `.xcs` | Plain UTF-8 JSON | Legacy. xTool Studio v1.7+ can open but no longer saves it. |
-| `.xs` (v2) | ZIP of JSON files and resources | Default since xTool Studio v1.7. |
+## Getting Started
 
-Both formats share the same `TEXT` display schema, so substitution works the same way on each.
+### Prerequisites
 
-## Installation
+- Node.js 19 or newer, or a current web browser.
+- A package manager such as npm or pnpm.
+
+### Installation
 
 ```bash
 npm install @richardmcquiston01/unofficial-xcs-writer
@@ -29,9 +45,22 @@ npm install @richardmcquiston01/unofficial-xcs-writer
 pnpm add @richardmcquiston01/unofficial-xcs-writer
 ```
 
-## Quick start
+### Usage
 
-### Fill in a template
+To fill in a template, follow these steps:
+
+1. Load the file as an `ArrayBuffer`.
+2. Check the format with `assertXcsFormat`. It throws an error if the file is not valid.
+3. List the placeholders with `extractXcsTokens`.
+4. Call `renderXcsFile` with your values.
+
+For `.xs` files, use `assertXsFormat`, `extractXsTokens`, and `renderXsFile`. They work the same way.
+
+To build a project, call `createXCS` with a machine name. Add objects with `.addText()`, `.addPath()`, and `.addBitmap()`. Finish with `.toBytes()` for `.xcs` or `.toXsBytes()` for `.xs`.
+
+### Examples
+
+Fill in a template:
 
 ```ts
 import {
@@ -43,18 +72,19 @@ import type { XcsVariable } from '@richardmcquiston01/unofficial-xcs-writer';
 
 const buffer: ArrayBuffer = await fetch('/templates/name-tag.xcs').then((r) => r.arrayBuffer());
 
-assertXcsFormat(buffer); // throws a descriptive error if invalid
+assertXcsFormat(buffer);
 const tokens: string[] = extractXcsTokens(buffer); // ['FirstName', 'LastName']
 
-const variables: XcsVariable[] = [{ token: 'FirstName', defaultValue: 'Guest' }, { token: 'LastName' }];
+const variables: XcsVariable[] = [
+  { token: 'FirstName', defaultValue: 'Guest' },
+  { token: 'LastName' },
+];
 const values: Record<string, string> = { FirstName: 'Jane', LastName: 'Smith' };
 
 const output: Uint8Array = renderXcsFile(buffer, variables, values);
 ```
 
-`.xs` files use the same flow with `assertXsFormat`, `extractXsTokens`, and `renderXsFile`. Every archive entry other than the modified display chunks passes through byte-for-byte unchanged.
-
-### Build a project
+Build a project from scratch:
 
 ```ts
 import {
@@ -80,64 +110,82 @@ const bytes: Uint8Array = createXCS('P2S')
   .addPath('M0 0L10 0L10 10L0 10Z', 0, 60, 10, 10, {
     processing: { processingType: 'VECTOR_CUTTING', values: { power: 80, speed: 10 } },
   })
-  .toXsBytes(); // or .toBytes() for .xcs
+  .toXsBytes();
 ```
 
-Notes:
+Keep these points in mind:
 
-- Text needs a glyph `layout` so xTool Studio renders real outlines rather than placeholder blocks.
-- `processing` is applied to `.xs` output only. Displays with identical settings share one profile.
-- Processing values are unvalidated. Check power and speed in xTool Studio before cutting.
+- Text needs a glyph `layout`. Without one, xTool Studio shows placeholder blocks instead of real letters.
+- The `processing` option only changes `.xs` output. Objects with the same settings share one profile.
+- The library does not check the processing values. Confirm power and speed in xTool Studio before you cut.
 
-### Target a machine
+[Back to Top](#table-of-contents)
 
-`createXCS` accepts a machine name from `XTOOL_MACHINES`, a `MachineProfile` object, or a raw device id string.
+## Supported Machines
 
-```ts
-import { createXCS, XTOOL_MACHINES } from '@richardmcquiston01/unofficial-xcs-writer';
+Pass one of these names to `createXCS`. The library then uses the real device ids and default power for that machine.
 
-for (const machine of Object.keys(XTOOL_MACHINES)) {
-  const bytes: Uint8Array = createXCS(machine)
-    .addPath('M0 0L10 0L10 10L0 10Z', 0, 0, 10, 10)
-    .toXsBytes();
-}
-```
+| | | | |
+|---|---|---|---|
+| P2S | P3 | S1 | M2 |
+| M1 Ultra | F1 | F1 Lite | F1 Ultra |
+| F2 | F2 Ultra | F2 Ultra (Single) | F2 Ultra UV |
+| MetalFab | | | |
 
-Supported machines: P2S, P3, S1, M2, M1 Ultra, F1, F1 Lite, F1 Ultra, F2, F2 Ultra, F2 Ultra (Single), F2 Ultra UV, MetalFab.
+You can also pass a `MachineProfile` object or a plain device id string. A plain string still works, but it gets default values. To export one design for every machine, loop over `Object.keys(XTOOL_MACHINES)`.
 
-## Documentation
+[Back to Top](#table-of-contents)
 
-See [API.md](./API.md) for the full reference: signatures, options, types, and behavior notes. Release history is in [CHANGELOG.md](./CHANGELOG.md).
+## Known Limitations
 
-## Known limitations
-
-- Substituting text on an already-curved `TEXT` display lays the new text out straight.
-- Curved text built from scratch is not verified against real xTool Studio rendering.
+- New text on an already curved text object is laid out straight.
+- Curved text built from scratch has not been checked against real xTool Studio output.
 - Multi-line curved text is not supported.
 - `.xcs` output has no processing-profile support.
+
+[Back to Top](#table-of-contents)
+
+## More Information
+
+- [API.md](./API.md) lists every function, option, and type.
+- [CHANGELOG.md](./CHANGELOG.md) lists changes for each release.
+
+[Back to Top](#table-of-contents)
 
 ## Development
 
 ```bash
 pnpm install      # install dependencies
-pnpm build        # tsup -> dist/ (ESM + CJS + .d.ts)
-pnpm dev          # watch mode
-pnpm test         # vitest
-pnpm typecheck    # tsc --noEmit
+pnpm build        # build to dist/ (ESM, CJS, and type files)
+pnpm dev          # rebuild on every save
+pnpm test         # run the tests
+pnpm typecheck    # check types without building
 ```
 
-## Support
+The library uses [opentype.js](https://github.com/opentypejs/opentype.js) to read glyph outlines and [fflate](https://github.com/101arrowz/fflate) to read and write ZIP archives. The built-in fallback font is [Arimo](https://fonts.google.com/specimen/Arimo) version 5.2.8, under the Apache 2 license. Its license text is in `third_party/arimo/LICENSE`.
 
-If this library has helped you, please consider donating to offset development and AI credit costs.
+[Back to Top](#table-of-contents)
+
+## Buy Me a Coffee
+
+If this app, code, or repository has helped you or someone you know, please consider donating. I appreciate any help to offset the costs of development and/or AI Credits.
 
 [**Donate via Stripe**](https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800), or scan:
 
 [![Donate via Stripe](./donate.svg)](https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800)
 
-## Credits and license
+[Back to Top](#table-of-contents)
 
-[MIT](LICENSE). Glyph extraction uses [opentype.js](https://github.com/opentypejs/opentype.js) and `.xs` archives use [fflate](https://github.com/101arrowz/fflate). The bundled fallback font is [Arimo](https://fonts.google.com/specimen/Arimo) v5.2.8 (Apache-2.0, see `third_party/arimo/LICENSE`).
+## License
 
-(c) 2026 Richard McQuiston
+MIT. See [LICENSE](./LICENSE). The bundled Arimo font uses the Apache 2 license.
 
-xTool, xTool Studio, and xTool Creative Space are trademarks of Makeblock Co., Ltd.
+[Back to Top](#table-of-contents)
+
+## Copyright
+
+(c)2026 Richard McQuiston. All rights reserved.
+
+xTool, xTool Studio, and xTool Creative Space are trademarks of Makeblock Co., Ltd. This project is not affiliated with, endorsed by, or sponsored by Makeblock Co., Ltd. or xTool.
+
+[Back to Top](#table-of-contents)

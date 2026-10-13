@@ -1,11 +1,17 @@
 # Changelog
 
+[Back to README](./README.md)
+
+| [Unreleased](#unreleased) | [0.8.1 - 2026-09-21](#081---2026-09-21) | [0.8.0 - 2026-09-21](#080---2026-09-21) | [0.7.0 - 2026-09-21](#070---2026-09-21) | [0.6.0 - 2026-09-21](#060---2026-09-21) | [0.5.0 - 2026-09-20](#050---2026-09-20) | [0.4.1 - 2026-09-19](#041---2026-09-19) | [0.4.0 - 2026-09-19](#040---2026-09-19) | [0.3.1 - 2026-08-17](#031---2026-08-17) | [0.3.0 - 2026-07-14](#030---2026-07-14) | [0.2.0 - 2026-07-14](#020---2026-07-14) | [0.1.0 - 2026-05-19](#010---2026-05-19) |
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+[Back to Top](#changelog)
 
 ## [0.8.1] - 2026-09-21
 
@@ -21,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Copyright section**: added a note that xTool, xTool Studio, and xTool Creative Space are
   registered trademarks of Makeblock Co., Ltd., and that this project isn't affiliated with,
   endorsed by, or sponsored by Makeblock or xTool.
+
+[Back to Top](#changelog)
 
 ## [0.8.0] - 2026-09-21
 
@@ -42,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`file.device.id`, i.e. `"P2S"`). `.xcs` output (`.toBytes()`) is unaffected -- it has no
   `deviceCode` field.
 
+[Back to Top](#changelog)
+
 ## [0.7.0] - 2026-09-21
 
 ### Added
@@ -56,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is structurally different and much less understood, so it isn't implemented (see `CLAUDE.md`'s
   Open Issues).
 
+[Back to Top](#changelog)
+
 ## [0.6.0] - 2026-09-21
 
 ### Added
@@ -69,6 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   profiles and device bindings are left empty (no `addProfile`-style API exists yet) -- a
   generated `.xs` file's power/speed settings may need to be configured manually in xTool
   Studio before cutting/engraving.
+
+[Back to Top](#changelog)
 
 ## [0.5.0] - 2026-09-20
 
@@ -87,6 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   vector store. `.xs` *generation* (building a new project from scratch) isn't implemented yet
   — see `CLAUDE.md`'s "Open Issues".
 
+[Back to Top](#changelog)
+
 ## [0.4.1] - 2026-09-19
 
 ### Changed
@@ -96,6 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which pointed at this repo's `dist` branch as a workaround). No code changes
   from 0.4.0; this is the first published release carrying the generation API
   and curved-text layout described below.
+
+[Back to Top](#changelog)
 
 ## [0.4.0] - 2026-09-19
 
@@ -124,6 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still can't decode an existing curved display's `style.curveX`/`curveY`, but the new building
   API doesn't have that problem (the caller supplies the angle directly).
 
+[Back to Top](#changelog)
+
 ## [0.3.1] - 2026-08-17
 
 ### Changed
@@ -133,6 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `donate.svg`), now the last section of the README.
 - `donate.svg` is included in the published tarball so the README's QR image
   resolves for consumers reading it from the package.
+
+[Back to Top](#changelog)
 
 ## [0.3.0] - 2026-07-14
 
@@ -148,6 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Republished the glyph outline extraction feature with a correct build. The
   0.2.0 tarball on npm was packed from a stale `dist/` and does not actually
   contain the glyph regeneration code its README describes — use 0.3.0 instead.
+
+[Back to Top](#changelog)
 
 ## [0.2.0] - 2026-07-14
 
@@ -174,6 +198,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   substituted text on a curved TEXT display gets correctly-shaped glyphs laid
   out on a straight baseline.
 
+[Back to Top](#changelog)
+
 ## [0.1.0] - 2026-05-19
 
 ### Added
@@ -183,3 +209,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Core API: `assertXcsFormat`, `readXcsFile`, `extractXcsTokens`,
   `renderXcsFile`, and the `XcsVariable` type.
 - Dual ESM + CJS build with TypeScript declarations via tsup.
+
+[Back to Top](#changelog)
+
+---
+
+[Back to README](./README.md)
