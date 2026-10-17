@@ -15,6 +15,38 @@ export function collectTextTokens(displays: XcsDisplay[], seen: Set<string>): vo
   }
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Replaces `{{token}}` placeholders for the supplied variables in one pass.
+ * Values are inserted literally (no `$&`/`$'`/`$$` expansion) and inserted
+ * text is never scanned for further placeholders. Variables with an empty
+ * token are ignored; placeholders with no matching variable are left as-is.
+ */
+export function replaceTokens(
+  text: string,
+  variables: XcsVariable[],
+  values: Record<string, string>
+): string {
+  const replacementByPlaceholder = new Map<string, string>();
+  for (const variable of variables) {
+    if (!variable.token) continue;
+    replacementByPlaceholder.set(
+      `{{${variable.token}}}`,
+      values[variable.token] ?? variable.defaultValue ?? ''
+    );
+  }
+  if (replacementByPlaceholder.size === 0) return text;
+
+  const pattern = new RegExp(
+    Array.from(replacementByPlaceholder.keys()).map(escapeRegExp).join('|'),
+    'g'
+  );
+  return text.replace(pattern, (placeholder) => replacementByPlaceholder.get(placeholder) ?? placeholder);
+}
+
 function resolveFont(
   fontFamily: string | undefined,
   fonts: Record<string, ArrayBuffer> | undefined,
@@ -55,11 +87,7 @@ export function substituteTextDisplays(
     if (display.type !== 'TEXT' || typeof display.text !== 'string') continue;
 
     const originalText = display.text;
-    let text = originalText;
-    for (const variable of variables) {
-      const replacement = values[variable.token] ?? variable.defaultValue ?? '';
-      text = text.replaceAll(`{{${variable.token}}}`, replacement);
-    }
+    const text = replaceTokens(originalText, variables, values);
     display.text = text;
 
     if (text === originalText) continue;

@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `renderXcsFile`/`renderXsFile` token substitution now runs in a single pass with a function
+  replacer. Values are inserted literally (`$&`, `$'`, `` $` ``, `$$` are no longer expanded), and
+  text inserted for one variable is never re-scanned for another variable's `{{token}}`. Variables
+  with an empty token are ignored.
+
 [Back to Top](#changelog)
 
 ## [0.8.2] - 2026-10-13
